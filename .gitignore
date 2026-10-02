@@ -1,0 +1,22 @@
+# build output
+target/
+*.class
+
+# local secrets (never commit)
+**/application-local.yml
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# frontend
+node_modules/
+dist/
+
+# logs & temp
+*.log
+*.tmp
+

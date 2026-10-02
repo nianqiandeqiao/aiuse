@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: med-reminder-backend
+  profiles:
+    active: local
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/med_reminder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: ""
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: info
+    com.aiuse.medreminder: debug
+
