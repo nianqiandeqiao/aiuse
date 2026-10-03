@@ -92,6 +92,25 @@ public class MedicationLogRepository {
         return list.stream().findFirst();
     }
 
+    public List<MedicationLog> findByElderIdAndDateRange(long elderId, LocalDate from, LocalDate to) {
+        return jdbcTemplate.query(
+                "SELECT " + COLUMNS + " FROM medication_log WHERE elder_id = ? AND take_date BETWEEN ? AND ? "
+                        + "ORDER BY take_date DESC, remind_time ASC, id ASC",
+                ROW_MAPPER, elderId, Date.valueOf(from), Date.valueOf(to));
+    }
+
+    public int countByStatusInRange(long elderId, LocalDate from, LocalDate to, String status) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM medication_log WHERE elder_id = ? AND take_date BETWEEN ? AND ? "
+                        + "AND status = ?",
+                Integer.class, elderId, Date.valueOf(from), Date.valueOf(to), status);
+        return count == null ? 0 : count;
+    }
+
+    public int deleteById(long id) {
+        return jdbcTemplate.update("DELETE FROM medication_log WHERE id = ?", id);
+    }
+
     private static java.time.LocalDate toLocalDate(Date date) {
         return date == null ? null : date.toLocalDate();
     }
@@ -100,4 +119,3 @@ public class MedicationLogRepository {
         return timestamp == null ? null : timestamp.toLocalDateTime();
     }
 }
-

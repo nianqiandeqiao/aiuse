@@ -2,6 +2,7 @@ package com.aiuse.medreminder.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
@@ -25,9 +26,10 @@ public record MedicationPlanCreateRequest(
         String takeRelation,
 
         @Size(max = 100, message = "提醒时间不能超过100个字符")
+        @Pattern(regexp = "^\\s*$|^(\\d{2}:\\d{2})(,\\d{2}:\\d{2})*$",
+                message = "remindTimes 格式应为 HH:mm 或 HH:mm,HH:mm")
         String remindTimes,
 
         LocalDate startDate,
         LocalDate endDate) {
 }
-

@@ -1,11 +1,12 @@
-# Day-1 smoke test: elder profile -> medication plan -> check-in.
+# Interface smoke test: elder profile -> medication plan -> check-in -> today list -> stats.
 # Usage: start the backend first (scripts/run-backend.ps1), then run this script.
 param(
     [string]$BaseUrl = "http://localhost:8080/api"
 )
 $ErrorActionPreference = 'Stop'
 
-$script:failed = $false
+$script:passed = 0
+$script:failed = 0
 
 function Invoke-Api {
     param(
@@ -15,7 +16,7 @@ function Invoke-Api {
     )
     $uri = "$BaseUrl$Path"
     if ($null -ne $Body) {
-        $json = $Body | ConvertTo-Json -Depth 5
+        $json = $Body | ConvertTo-Json -Depth 6
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
         $resp = Invoke-WebRequest -Uri $uri -Method $Method -Body $bytes `
             -ContentType "application/json; charset=utf-8" -UseBasicParsing
@@ -28,9 +29,10 @@ function Invoke-Api {
 
 function Assert([bool]$condition, [string]$message) {
     if ($condition) {
+        $script:passed++
         Write-Host "  PASS: $message" -ForegroundColor Green
     } else {
-        $script:failed = $true
+        $script:failed++
         Write-Host "  FAIL: $message" -ForegroundColor Red
     }
 }
@@ -41,17 +43,23 @@ function Step([string]$title, [scriptblock]$action) {
     try {
         return (& $action)
     } catch {
-        $script:failed = $true
+        $script:failed++
         Write-Host "  FAIL: $($_.Exception.Message)" -ForegroundColor Red
         return $null
     }
 }
 
-# Chinese test data built from code points so this script stays ASCII-only (PowerShell 5.1 reads .ps1 as ANSI).
-$elderName   = ([char]0x5F20).ToString() + ([char]0x4E09).ToString()                                  # Zhang San
-$drugName    = ([char]0x963F).ToString() + ([char]0x53F8).ToString() + ([char]0x5339).ToString() + ([char]0x6797).ToString()
-$disease     = ([char]0x9AD8).ToString() + ([char]0x8840).ToString() + ([char]0x538B).ToString()        # hypertension
-$afterMeal   = ([char]0x996D).ToString() + ([char]0x540E).ToString()                                    # after meal
+# Chinese test data built from code points so this script stays ASCII-only
+# (Windows PowerShell 5.1 reads .ps1 files with the ANSI code page).
+function Zh([int[]]$codePoints) {
+    return ($codePoints | ForEach-Object { [char]$_ }) -join ''
+}
+$elderName   = Zh @(0x5F20, 0x4E09)                             # Zhang San
+$newName     = Zh @(0x674E, 0x56DB)                             # Li Si
+$drugName    = Zh @(0x963F, 0x53F8, 0x5339, 0x6797)             # aspirin
+$drugName2   = Zh @(0x534E, 0x6CD5, 0x6797)                     # warfarin
+$disease     = Zh @(0x9AD8, 0x8840, 0x538B)                     # hypertension
+$afterMeal   = Zh @(0x996D, 0x540E)                             # after meal
 $today       = (Get-Date).ToString("yyyy-MM-dd")
 
 # 1. health
@@ -92,8 +100,31 @@ Step "3. list elders GET /elders" {
     Assert ($r.data.Count -ge 1) "elder count = $($r.data.Count)"
 }
 
-# 4. create medication plan
-$plan = Step "4. create plan POST /plans" {
+# 4. search elders by keyword (Chinese)
+Step "4. search elders GET /elders?keyword=" {
+    $encoded = [System.Uri]::EscapeDataString($elderName)
+    $r = Invoke-Api -Method Get -Path "/elders?keyword=$encoded"
+    Assert ($r.code -eq 0) "search code=0"
+    Assert ($r.data.Count -ge 1) "search hit count = $($r.data.Count)"
+}
+
+# 5. update elder
+Step "5. update elder PUT /elders/{id}" {
+    $r = Invoke-Api -Method Put -Path "/elders/$($elder.id)" -Body @{
+        name           = $newName
+        age            = 79
+        gender         = "M"
+        phone          = "13900000000"
+        chronicDisease = $disease
+        note           = "updated"
+    }
+    Assert ($r.code -eq 0) "update code=0"
+    Assert ($r.data.name -eq $newName) "name updated to $($r.data.name)"
+    Assert ($r.data.age -eq 79) "age updated to $($r.data.age)"
+}
+
+# 6. create plan
+$plan = Step "6. create plan POST /plans" {
     $r = Invoke-Api -Method Post -Path "/plans" -Body @{
         elderId      = $elder.id
         drugName     = $drugName
@@ -104,13 +135,44 @@ $plan = Step "4. create plan POST /plans" {
         startDate    = $today
     }
     Assert ($r.code -eq 0) "create plan code=0"
-    Assert ($r.data.elderId -eq $elder.id) "plan belongs to elder $($elder.id)"
+    Assert ($r.data.remindTimes -eq "08:00,20:00") "remind times = $($r.data.remindTimes)"
     return $r.data
 }
 if (-not $plan) { exit 1 }
 
-# 5. check in
-Step "5. check-in POST /checkins" {
+# 7. list plans by elder
+Step "7. list plans GET /plans?elderId=" {
+    $r = Invoke-Api -Method Get -Path "/plans?elderId=$($elder.id)"
+    Assert ($r.code -eq 0) "plan list code=0"
+    Assert ($r.data.Count -ge 1) "plan count = $($r.data.Count)"
+}
+
+# 8. update plan
+Step "8. update plan PUT /plans/{id}" {
+    $r = Invoke-Api -Method Put -Path "/plans/$($plan.id)" -Body @{
+        drugName     = $drugName2
+        dosage       = "2 tablets"
+        frequency    = "twice a day"
+        takeRelation = $afterMeal
+        remindTimes  = "08:00,20:00"
+        startDate    = $today
+    }
+    Assert ($r.code -eq 0) "update plan code=0"
+    Assert ($r.data.drugName -eq $drugName2) "drug name updated to $($r.data.drugName)"
+    Assert ($r.data.dosage -eq "2 tablets") "dosage updated to $($r.data.dosage)"
+}
+
+# 9. today dose list (before check-in)
+Step "9. today list GET /plans/today (before check-in)" {
+    $r = Invoke-Api -Method Get -Path "/plans/today?elderId=$($elder.id)&date=$today"
+    Assert ($r.code -eq 0) "today list code=0"
+    Assert ($r.data.total -eq 2) "total doses today = $($r.data.total)"
+    Assert ($r.data.taken -eq 0) "taken = $($r.data.taken)"
+    Assert ($r.data.items[0].remindTime -eq "08:00") "first remind time = $($r.data.items[0].remindTime)"
+}
+
+# 10. check-in
+$log = Step "10. check-in POST /checkins" {
     $r = Invoke-Api -Method Post -Path "/checkins" -Body @{
         elderId    = $elder.id
         planId     = $plan.id
@@ -120,10 +182,11 @@ Step "5. check-in POST /checkins" {
     }
     Assert ($r.code -eq 0) "check-in code=0"
     Assert ($r.data.status -eq "TAKEN") "status = $($r.data.status)"
+    return $r.data
 }
 
-# 6. duplicate check-in must be rejected
-Step "6. duplicate check-in validation" {
+# 11. duplicate check-in
+Step "11. duplicate check-in validation" {
     $r = Invoke-Api -Method Post -Path "/checkins" -Body @{
         elderId    = $elder.id
         planId     = $plan.id
@@ -134,37 +197,98 @@ Step "6. duplicate check-in validation" {
     Assert ($r.code -eq 400) "duplicate check-in returns code=400"
 }
 
-# 7. query check-in records
-Step "7. list check-ins GET /checkins" {
-    $r = Invoke-Api -Method Get -Path "/checkins?elderId=$($elder.id)&date=$today"
-    Assert ($r.code -eq 0) "check-in list code=0"
-    Assert ($r.data.Count -ge 1) "check-in count = $($r.data.Count)"
+# 12. today list after check-in
+Step "12. today list after check-in" {
+    $r = Invoke-Api -Method Get -Path "/plans/today?elderId=$($elder.id)&date=$today"
+    Assert ($r.data.taken -eq 1) "taken = $($r.data.taken)"
+    Assert ($r.data.pending -eq 1) "pending = $($r.data.pending)"
+    Assert ($r.data.items[0].taken -eq $true) "08:00 marked as taken"
 }
 
-# 8. parameter validation
-Step "8. validation: missing name" {
+# 13. stats
+Step "13. stats GET /checkins/stats" {
+    $r = Invoke-Api -Method Get -Path "/checkins/stats?elderId=$($elder.id)&from=$today&to=$today"
+    Assert ($r.code -eq 0) "stats code=0"
+    Assert ($r.data.expected -eq 2) "expected doses = $($r.data.expected)"
+    Assert ($r.data.taken -eq 1) "taken doses = $($r.data.taken)"
+    Assert ($r.data.missed -eq 1) "missed doses = $($r.data.missed)"
+    Assert ($r.data.rate -eq 0.5) "on-time rate = $($r.data.rate)"
+}
+
+# 14. list check-ins by date range
+Step "14. list check-ins GET /checkins?from=&to=" {
+    $r = Invoke-Api -Method Get -Path "/checkins?elderId=$($elder.id)&from=$today&to=$today"
+    Assert ($r.code -eq 0) "range query code=0"
+    Assert ($r.data.Count -eq 1) "records in range = $($r.data.Count)"
+}
+
+# 15. undo check-in
+Step "15. undo check-in DELETE /checkins/{id}" {
+    if (-not $log) { throw "no check-in record to undo" }
+    $r = Invoke-Api -Method Delete -Path "/checkins/$($log.id)"
+    Assert ($r.code -eq 0) "undo code=0"
+    $after = Invoke-Api -Method Get -Path "/plans/today?elderId=$($elder.id)&date=$today"
+    Assert ($after.data.taken -eq 0) "taken back to 0 after undo"
+    $missing = Invoke-Api -Method Delete -Path "/checkins/$($log.id)"
+    Assert ($missing.code -eq 404) "undo again returns code=404"
+}
+
+# 16. stop plan, then today list should be empty
+Step "16. stop plan PUT /plans/{id}/status?status=0" {
+    $r = Invoke-Api -Method Put -Path "/plans/$($plan.id)/status?status=0"
+    Assert ($r.code -eq 0) "stop plan code=0"
+    Assert ($r.data.status -eq 0) "plan status = $($r.data.status)"
+    $todayList = Invoke-Api -Method Get -Path "/plans/today?elderId=$($elder.id)&date=$today"
+    Assert ($todayList.data.total -eq 0) "today list is empty after stop"
+}
+
+# 17. resume plan
+Step "17. resume plan PUT /plans/{id}/status?status=1" {
+    $r = Invoke-Api -Method Put -Path "/plans/$($plan.id)/status?status=1"
+    Assert ($r.code -eq 0) "resume plan code=0"
+    $todayList = Invoke-Api -Method Get -Path "/plans/today?elderId=$($elder.id)&date=$today"
+    Assert ($todayList.data.total -eq 2) "today list restored to 2"
+    $bad = Invoke-Api -Method Put -Path "/plans/$($plan.id)/status?status=7"
+    Assert ($bad.code -eq 400) "illegal status returns code=400"
+}
+
+# 18. validation: missing name / bad remind times
+Step "18. parameter validation" {
     $r = Invoke-Api -Method Post -Path "/elders" -Body @{ age = 70 }
-    Assert ($r.code -eq 400) "missing name returns code=400"
+    Assert ($r.code -eq 400) "missing elder name returns code=400"
+    $badTime = "8" + (Zh @(0x70B9))
+    $bad = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId     = $elder.id
+        drugName    = $drugName
+        dosage      = "1 tablet"
+        remindTimes = $badTime
+    }
+    Assert ($bad.code -eq 400) "bad remindTimes format returns code=400"
 }
 
-# 9. unknown resource
-Step "9. unknown resource GET /elders/999999" {
+# 19. unknown resources
+Step "19. unknown resources" {
     $r = Invoke-Api -Method Get -Path "/elders/999999"
-    Assert ($r.code -eq 404) "unknown id returns code=404"
+    Assert ($r.code -eq 404) "unknown elder returns code=404"
+    $p = Invoke-Api -Method Get -Path "/plans/999999"
+    Assert ($p.code -eq 404) "unknown plan returns code=404"
 }
 
-# 10. soft delete
-Step "10. delete elder DELETE /elders/{id}" {
-    $r = Invoke-Api -Method Delete -Path "/elders/$($elder.id)"
-    Assert ($r.code -eq 0) "delete code=0"
+# 20. cleanup: delete plan, then elder
+Step "20. cleanup DELETE /plans/{id} and /elders/{id}" {
+    $r = Invoke-Api -Method Delete -Path "/plans/$($plan.id)"
+    Assert ($r.code -eq 0) "delete plan code=0"
+    $d = Invoke-Api -Method Delete -Path "/elders/$($elder.id)"
+    Assert ($d.code -eq 0) "delete elder code=0"
     $check = Invoke-Api -Method Get -Path "/elders/$($elder.id)"
     Assert ($check.code -eq 404) "deleted elder returns code=404"
 }
 
 Write-Host ""
-if ($script:failed) {
+Write-Host "----------------------------------------"
+Write-Host ("PASS: {0}   FAIL: {1}" -f $script:passed, $script:failed)
+if ($script:failed -gt 0) {
     Write-Host "SMOKE TEST FAILED" -ForegroundColor Red
     exit 1
 }
 Write-Host "SMOKE TEST PASSED" -ForegroundColor Green
-

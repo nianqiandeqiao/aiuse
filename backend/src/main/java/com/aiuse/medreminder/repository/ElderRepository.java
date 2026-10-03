@@ -1,6 +1,7 @@
 package com.aiuse.medreminder.repository;
 
 import com.aiuse.medreminder.dto.ElderCreateRequest;
+import com.aiuse.medreminder.dto.ElderUpdateRequest;
 import com.aiuse.medreminder.entity.Elder;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -65,6 +66,22 @@ public class ElderRepository {
                 ROW_MAPPER);
     }
 
+    public List<Elder> search(String keyword) {
+        String like = "%" + keyword + "%";
+        return jdbcTemplate.query(
+                "SELECT " + COLUMNS + " FROM elder WHERE deleted = 0 "
+                        + "AND (name LIKE ? OR phone LIKE ? OR chronic_disease LIKE ?) ORDER BY id DESC",
+                ROW_MAPPER, like, like, like);
+    }
+
+    public int update(long id, ElderUpdateRequest request) {
+        return jdbcTemplate.update(
+                "UPDATE elder SET name = ?, age = ?, gender = ?, phone = ?, chronic_disease = ?, note = ? "
+                        + "WHERE id = ? AND deleted = 0",
+                request.name(), request.age(), request.gender(), request.phone(),
+                request.chronicDisease(), request.note(), id);
+    }
+
     public Optional<Elder> findById(long id) {
         List<Elder> list = jdbcTemplate.query(
                 "SELECT " + COLUMNS + " FROM elder WHERE id = ? AND deleted = 0",
@@ -80,4 +97,3 @@ public class ElderRepository {
         return timestamp == null ? null : timestamp.toLocalDateTime();
     }
 }
-

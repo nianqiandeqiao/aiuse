@@ -1,6 +1,7 @@
 package com.aiuse.medreminder.repository;
 
 import com.aiuse.medreminder.dto.MedicationPlanCreateRequest;
+import com.aiuse.medreminder.dto.MedicationPlanUpdateRequest;
 import com.aiuse.medreminder.entity.MedicationPlan;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -79,6 +80,39 @@ public class MedicationPlanRepository {
                 ROW_MAPPER, elderId);
     }
 
+    public List<MedicationPlan> findActiveByElderId(long elderId) {
+        return jdbcTemplate.query(
+                "SELECT " + COLUMNS + " FROM medication_plan WHERE elder_id = ? AND deleted = 0 "
+                        + "AND status = 1 ORDER BY id ASC",
+                ROW_MAPPER, elderId);
+    }
+
+    public int update(long id, MedicationPlanUpdateRequest request) {
+        return jdbcTemplate.update(
+                "UPDATE medication_plan SET drug_name = ?, dosage = ?, frequency = ?, take_relation = ?, "
+                        + "remind_times = ?, start_date = ?, end_date = ? WHERE id = ? AND deleted = 0",
+                request.drugName(), request.dosage(), request.frequency(), request.takeRelation(),
+                request.remindTimes(),
+                request.startDate() == null ? null : Date.valueOf(request.startDate()),
+                request.endDate() == null ? null : Date.valueOf(request.endDate()),
+                id);
+    }
+
+    public int updateStatus(long id, int status) {
+        return jdbcTemplate.update(
+                "UPDATE medication_plan SET status = ? WHERE id = ? AND deleted = 0", status, id);
+    }
+
+    public int softDelete(long id) {
+        return jdbcTemplate.update(
+                "UPDATE medication_plan SET deleted = 1 WHERE id = ? AND deleted = 0", id);
+    }
+
+    public int softDeleteByElderId(long elderId) {
+        return jdbcTemplate.update(
+                "UPDATE medication_plan SET deleted = 1 WHERE elder_id = ? AND deleted = 0", elderId);
+    }
+
     private static java.time.LocalDate toLocalDate(Date date) {
         return date == null ? null : date.toLocalDate();
     }
@@ -87,4 +121,3 @@ public class MedicationPlanRepository {
         return timestamp == null ? null : timestamp.toLocalDateTime();
     }
 }
-
