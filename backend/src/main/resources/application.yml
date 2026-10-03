@@ -13,10 +13,15 @@ spring:
       connection-timeout: 5000
 
 server:
-  port: 8080
+  port: 8081
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.aiuse.medreminder.entity
+  configuration:
+    map-underscore-to-camel-case: true
 
 logging:
   level:
     root: info
     com.aiuse.medreminder: debug
-

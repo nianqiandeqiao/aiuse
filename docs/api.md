@@ -1,6 +1,6 @@
 # 后端接口清单（第 2 天完成版）
 
-服务地址：`http://localhost:8080`，所有接口前缀 `/api`。
+服务地址：`http://localhost:8081`，所有接口前缀 `/api`。
 
 ## 统一响应体
 
@@ -199,4 +199,3 @@ powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
 - 拍照识药 OCR（第 3 天，接百度通用文字识别）
 - 语音播报（浏览器 `speechSynthesis` 即可，前端负责；如需百度语音合成再补后端代理）
 - 药物相互作用检查（第 4 天，核心创新点，Java 规则服务）
-

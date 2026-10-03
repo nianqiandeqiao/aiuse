@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiuse.medreminder.mapper.MedicationPlanMapper">
+
+    <resultMap id="PlanMap" type="com.aiuse.medreminder.entity.MedicationPlan">
+        <id column="id" property="id"/>
+        <result column="elder_id" property="elderId"/>
+        <result column="drug_name" property="drugName"/>
+        <result column="dosage" property="dosage"/>
+        <result column="frequency" property="frequency"/>
+        <result column="take_relation" property="takeRelation"/>
+        <result column="remind_times" property="remindTimes"/>
+        <result column="start_date" property="startDate"/>
+        <result column="end_date" property="endDate"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, elder_id, drug_name, dosage, frequency, take_relation, remind_times,
+        start_date, end_date, status, created_at, updated_at, deleted
+    </sql>
+
+    <insert id="insert" parameterType="com.aiuse.medreminder.entity.MedicationPlan"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO medication_plan (elder_id, drug_name, dosage, frequency, take_relation,
+                                     remind_times, start_date, end_date)
+        VALUES (#{elderId}, #{drugName}, #{dosage}, #{frequency}, #{takeRelation},
+                #{remindTimes}, #{startDate}, #{endDate})
+    </insert>
+
+    <select id="findById" resultMap="PlanMap">
+        SELECT <include refid="columns"/>
+        FROM medication_plan
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <select id="findByElderId" resultMap="PlanMap">
+        SELECT <include refid="columns"/>
+        FROM medication_plan
+        WHERE elder_id = #{elderId} AND deleted = 0
+        ORDER BY id DESC
+    </select>
+
+    <select id="findActiveByElderId" resultMap="PlanMap">
+        SELECT <include refid="columns"/>
+        FROM medication_plan
+        WHERE elder_id = #{elderId} AND deleted = 0 AND status = 1
+        ORDER BY id ASC
+    </select>
+
+    <update id="update" parameterType="com.aiuse.medreminder.entity.MedicationPlan">
+        UPDATE medication_plan
+        SET drug_name = #{drugName},
+            dosage = #{dosage},
+            frequency = #{frequency},
+            take_relation = #{takeRelation},
+            remind_times = #{remindTimes},
+            start_date = #{startDate},
+            end_date = #{endDate}
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE medication_plan SET status = #{status} WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE medication_plan SET deleted = 1 WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="softDeleteByElderId">
+        UPDATE medication_plan SET deleted = 1 WHERE elder_id = #{elderId} AND deleted = 0
+    </update>
+</mapper>
+

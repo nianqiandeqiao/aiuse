@@ -1,7 +1,7 @@
 # Interface smoke test: elder profile -> medication plan -> check-in -> today list -> stats.
 # Usage: start the backend first (scripts/run-backend.ps1), then run this script.
 param(
-    [string]$BaseUrl = "http://localhost:8080/api"
+    [string]$BaseUrl = "http://localhost:8081/api"
 )
 $ErrorActionPreference = 'Stop'
 

@@ -15,9 +15,9 @@
 
 ## 技术栈
 
-- 后端：Java 17 + Spring Boot 4.0.0 + JdbcTemplate + MySQL 9.6
+- 后端：Java 17 + Spring Boot 4.0.0 + MyBatis 3.5.19 + Lombok + MySQL 9.6
 - 前端（赵负责）：Vue 3 + Vite，默认 `http://localhost:5173`
-- 后端端口：`8080`，接口前缀 `/api`
+- 后端端口：`8081`，接口前缀 `/api`
 
 ## 目录结构
 
@@ -30,14 +30,15 @@ aiuse/
 │       │   ├── config/      # CORS、建表初始化
 │       │   ├── controller/  # REST 接口
 │       │   ├── service/     # 业务逻辑
-│       │   ├── repository/  # JdbcTemplate 数据访问
+│       │   ├── mapper/      # MyBatis Mapper 接口（持久层）
 │       │   ├── entity/      # 数据库实体
 │       │   ├── dto/         # 请求参数对象
 │       │   └── vo/          # 返回给前端的结果对象（今日清单、统计）
 │       └── resources/
 │           ├── application.yml
 │           ├── application-local.yml.example
-│           └── schema.sql   # 三张核心表
+│           ├── schema.sql   # 三张核心表
+│           └── mapper/      # MyBatis SQL 映射文件（*.xml）
 ├── docs/api.md              # 接口清单（给赵、陈）
 └── scripts/                 # 环境、建库、启动、冒烟脚本
 ```
@@ -71,7 +72,7 @@ Copy-Item backend/src/main/resources/application-local.yml.example backend/src/m
 powershell -ExecutionPolicy Bypass -File scripts/run-backend.ps1
 ```
 
-启动成功后访问健康检查：<http://localhost:8080/api/health>
+启动成功后访问健康检查：<http://localhost:8081/api/health>
 
 > 注意：本机 PowerShell 处于 Restricted 执行策略，脚本必须用
 > `powershell -ExecutionPolicy Bypass -File <脚本>` 运行；直接双击或 `.\scripts\xxx.ps1` 会被拦截。
@@ -99,14 +100,14 @@ powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
 
 ```powershell
 # 1) 服务启动后
-Invoke-RestMethod http://localhost:8080/api/health
+Invoke-RestMethod http://localhost:8081/api/health
 # 2) 全链路冒烟
 powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
 ```
 
 ### 第 1 天验收记录（乔，2026-10-02）
 
-- 后端启动成功：Spring Boot 4.0.0 / Spring 7.0.1 / Tomcat 11 / 端口 8080
+- 后端启动成功：Spring Boot 4.0.0 / Spring 7.0.1 / Tomcat 11 / 端口 8080（第 3 天按你的要求改为 8081）
 - `GET /api/health` 返回 `status=UP, db=UP, mysqlVersion=9.6.0, schema=med_reminder`
 - `scripts/smoke-test.ps1` 全部 10 组用例、19 项断言通过（含中文姓名「张三」写入/回读、重复打卡拦截、缺参 400、未知 id 404、逻辑删除）
 - 持久化验证：重启服务后，老人/用药计划/打卡记录仍可查询
@@ -134,10 +135,25 @@ DELETE FROM medication_log; DELETE FROM medication_plan; DELETE FROM elder;
 
 > 语音播报属于前端实现（浏览器自带 `speechSynthesis` 就能播报，不需要后端接口），由赵负责；若后续决定改用百度语音合成，我再补一个后端代理接口，避免 API Key 暴露在前端。
 
+## 持久层改造：JdbcTemplate → MyBatis（10 月 3 日追加）
+
+按你的要求把持久层换成了课上学的 MyBatis，**接口行为完全不变**（同一套冒烟测试 53 项断言依旧全绿）。改动如下：
+
+- 依赖：`spring-boot-starter-jdbc` → `mybatis-spring-boot-starter` 4.0.0（MyBatis 3.5.19，官方针对 Spring Boot 4.0.0 构建的版本），另加 Lombok
+- 实体：`entity` 包三个类由 record 改成 POJO（`@Data`），因为 MyBatis 插入后要回填自增主键 `id`
+- 持久层：`repository` 包删除，改为 `mapper` 包下的 `ElderMapper` / `MedicationPlanMapper` / `MedicationLogMapper` 三个接口
+- SQL：全部搬到 `src/main/resources/mapper/*.xml`，用 `<resultMap>` 做字段映射，`useGeneratedKeys="true"` 回填主键
+- 配置：`application.yml` 增加 `mybatis.mapper-locations` 等配置；启动类加 `@MapperScan("com.aiuse.medreminder.mapper")`
+- Service 层只改了取值方式（record 的 `name()` → POJO 的 `getName()`），业务判断逻辑一行未动
+
+分层对照：`controller`（接口）→ `service`（业务）→ `mapper`（SQL）→ `entity`（表结构）。
+
+> 端口说明：`application.yml` 里的 `server.port` 已由 8080 改为 8081（你本地的选择），脚本、文档、健康检查地址已同步更新。
+
 ## 每日站会（21:00）三句话模板
 
 ```
-今天做了啥：老人档案/用药计划/打卡三块后端接口全部完成（含修改、停用、撤销打卡、按时率统计、今日服药清单），冒烟测试 53 项断言全绿，接口文档已更新发群。
+今天做了啥：老人档案/用药计划/打卡三块后端接口全部完成（含修改、停用、撤销打卡、按时率统计、今日服药清单），并按团队要求把持久层从 JdbcTemplate 换成 MyBatis，冒烟测试 53 项断言全绿，接口文档已更新发群。
 卡在哪：无（待跟进赵的前端页面进度、陈的百度云 OCR 审核是否通过）。
 明天做啥：接百度 OCR，做「上传照片 → 识别药名」接口，并配合陈准备真实药盒测试素材。
 ```

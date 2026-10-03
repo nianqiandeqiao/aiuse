@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiuse.medreminder.mapper.MedicationLogMapper">
+
+    <resultMap id="LogMap" type="com.aiuse.medreminder.entity.MedicationLog">
+        <id column="id" property="id"/>
+        <result column="elder_id" property="elderId"/>
+        <result column="plan_id" property="planId"/>
+        <result column="take_date" property="takeDate"/>
+        <result column="remind_time" property="remindTime"/>
+        <result column="take_time" property="takeTime"/>
+        <result column="status" property="status"/>
+        <result column="note" property="note"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, elder_id, plan_id, take_date, remind_time, take_time, status, note, created_at
+    </sql>
+
+    <insert id="insert" parameterType="com.aiuse.medreminder.entity.MedicationLog"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO medication_log (elder_id, plan_id, take_date, remind_time, take_time, status, note)
+        VALUES (#{elderId}, #{planId}, #{takeDate}, #{remindTime}, #{takeTime}, #{status}, #{note})
+    </insert>
+
+    <select id="findById" resultMap="LogMap">
+        SELECT <include refid="columns"/> FROM medication_log WHERE id = #{id}
+    </select>
+
+    <select id="findByElderId" resultMap="LogMap">
+        SELECT <include refid="columns"/>
+        FROM medication_log
+        WHERE elder_id = #{elderId}
+        ORDER BY take_date DESC, remind_time ASC, id ASC
+    </select>
+
+    <select id="findByElderIdAndDate" resultMap="LogMap">
+        SELECT <include refid="columns"/>
+        FROM medication_log
+        WHERE elder_id = #{elderId} AND take_date = #{takeDate}
+        ORDER BY remind_time ASC, id ASC
+    </select>
+
+    <select id="findByElderIdAndDateRange" resultMap="LogMap">
+        SELECT <include refid="columns"/>
+        FROM medication_log
+        WHERE elder_id = #{elderId} AND take_date BETWEEN #{from} AND #{to}
+        ORDER BY take_date DESC, remind_time ASC, id ASC
+    </select>
+
+    <select id="findByPlanIdAndDateAndRemindTime" resultMap="LogMap">
+        SELECT <include refid="columns"/>
+        FROM medication_log
+        WHERE plan_id = #{planId} AND take_date = #{takeDate} AND remind_time = #{remindTime}
+    </select>
+
+    <select id="countByStatusInRange" resultType="int">
+        SELECT COUNT(*)
+        FROM medication_log
+        WHERE elder_id = #{elderId}
+        AND take_date BETWEEN #{from} AND #{to}
+        AND status = #{status}
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM medication_log WHERE id = #{id}
+    </delete>
+</mapper>
+

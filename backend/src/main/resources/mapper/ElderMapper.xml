@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiuse.medreminder.mapper.ElderMapper">
+
+    <resultMap id="ElderMap" type="com.aiuse.medreminder.entity.Elder">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="age" property="age"/>
+        <result column="gender" property="gender"/>
+        <result column="phone" property="phone"/>
+        <result column="chronic_disease" property="chronicDisease"/>
+        <result column="note" property="note"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, name, age, gender, phone, chronic_disease, note, created_at, updated_at, deleted
+    </sql>
+
+    <insert id="insert" parameterType="com.aiuse.medreminder.entity.Elder"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO elder (name, age, gender, phone, chronic_disease, note)
+        VALUES (#{name}, #{age}, #{gender}, #{phone}, #{chronicDisease}, #{note})
+    </insert>
+
+    <select id="findAll" resultMap="ElderMap">
+        SELECT <include refid="columns"/>
+        FROM elder
+        WHERE deleted = 0
+        ORDER BY id DESC
+    </select>
+
+    <select id="search" resultMap="ElderMap">
+        SELECT <include refid="columns"/>
+        FROM elder
+        WHERE deleted = 0
+        AND (name LIKE CONCAT('%', #{keyword}, '%')
+        OR phone LIKE CONCAT('%', #{keyword}, '%')
+        OR chronic_disease LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY id DESC
+    </select>
+
+    <select id="findById" resultMap="ElderMap">
+        SELECT <include refid="columns"/>
+        FROM elder
+        WHERE id = #{id} AND deleted = 0
+    </select>
+
+    <update id="update" parameterType="com.aiuse.medreminder.entity.Elder">
+        UPDATE elder
+        SET name = #{name},
+            age = #{age},
+            gender = #{gender},
+            phone = #{phone},
+            chronic_disease = #{chronicDisease},
+            note = #{note}
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE elder SET deleted = 1 WHERE id = #{id} AND deleted = 0
+    </update>
+</mapper>
+
