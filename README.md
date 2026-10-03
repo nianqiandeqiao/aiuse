@@ -24,21 +24,22 @@
 ```
 aiuse/
 ├── backend/                 # 后端 Maven 工程
-│   └── src/main/
-│       ├── java/com/aiuse/medreminder/
-│       │   ├── common/      # 统一响应体、全局异常
-│       │   ├── config/      # CORS、建表初始化
-│       │   ├── controller/  # REST 接口
-│       │   ├── service/     # 业务逻辑
-│       │   ├── mapper/      # MyBatis Mapper 接口（持久层）
-│       │   ├── entity/      # 数据库实体
-│       │   ├── dto/         # 请求参数对象
-│       │   └── vo/          # 返回给前端的结果对象（今日清单、统计）
-│       └── resources/
-│           ├── application.yml
-│           ├── application-local.yml.example
-│           ├── schema.sql   # 三张核心表
-│           └── mapper/      # MyBatis SQL 映射文件（*.xml）
+│   ├── src/main/
+│   │   ├── java/com/aiuse/medreminder/
+│   │   │   ├── common/      # 统一响应体、全局异常
+│   │   │   ├── config/      # CORS、建表初始化
+│   │   │   ├── controller/  # REST 接口
+│   │   │   ├── service/     # 业务逻辑
+│   │   │   ├── mapper/      # MyBatis Mapper 接口（持久层）
+│   │   │   ├── entity/      # 数据库实体（POJO）
+│   │   │   ├── dto/         # 请求参数对象
+│   │   │   └── vo/          # 返回给前端的结果对象（今日清单、统计）
+│   │   └── resources/
+│   │       ├── application.yml
+│   │       ├── application-local.yml.example
+│   │       ├── schema.sql   # 三张核心表
+│   │       └── mapper/      # MyBatis SQL 映射文件（*.xml）
+│   └── src/test/java/com/aiuse/medreminder/   # JUnit 单元/接口测试
 ├── docs/api.md              # 接口清单（给赵、陈）
 └── scripts/                 # 环境、建库、启动、冒烟脚本
 ```
@@ -149,6 +150,30 @@ DELETE FROM medication_log; DELETE FROM medication_plan; DELETE FROM elder;
 分层对照：`controller`（接口）→ `service`（业务）→ `mapper`（SQL）→ `entity`（表结构）。
 
 > 端口说明：`application.yml` 里的 `server.port` 已由 8080 改为 8081（你本地的选择），脚本、文档、健康检查地址已同步更新。
+
+## 测试（src/test/java）
+
+项目现在有两层测试，分工不同：
+
+| 测试 | 位置 | 特点 |
+| --- | --- | --- |
+| JUnit 测试 15 个 | `backend/src/test/java/com/aiuse/medreminder/` | 随 `mvn test` 运行，**不需要先启动服务** |
+| 接口冒烟测试 53 项断言 | `scripts/smoke-test.ps1` | 打真实 HTTP 接口，端到端验证，需要先启动后端 |
+
+JUnit 测试按三层组织：
+
+- `MedReminderApplicationTests`：Spring 容器能否启动（1 个）
+- `ElderMapperTest`：持久层，验证 SQL 与字段映射、主键回填、逻辑删除（3 个）
+- `CheckinServiceTest`：业务层，验证打卡、重复打卡拦截、今日清单展开、按时率、撤销、越权打卡（5 个）
+- `ElderApiTest`：接口层（MockMvc），验证统一响应体、参数校验 400、资源不存在 404、健康检查（6 个）
+
+运行方式（项目根目录下）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/test-backend.ps1
+```
+
+测试类都加了 `@Transactional`，**跑完自动回滚，不会往数据库里留下脏数据**；但它们会真实连接本机 MySQL，所以测试前要保证 MySQL 在运行、`application-local.yml` 已配好密码。
 
 ## 每日站会（21:00）三句话模板
 
