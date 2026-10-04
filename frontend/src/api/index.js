@@ -25,11 +25,23 @@ http.interceptors.response.use(
     return body
   },
   (error) => {
+    if (error?.response?.status === 401) {
+      ElMessage.warning('未登录或登录已过期，请重新输入访问口令')
+      if (!window.location.hash.startsWith('#/login')) {
+        window.location.hash = '#/login'
+      }
+      return Promise.reject(error)
+    }
     const message = error?.response ? `请求失败（HTTP ${error.response.status}）` : '网络异常，请确认后端服务已启动'
     ElMessage.error(message)
     return Promise.reject(error)
   }
 )
+
+/* ---------------- 访问口令 ---------------- */
+export const authStatus = () => http.get('/auth/status')
+export const login = (password) => http.post('/auth/login', { password })
+export const logout = () => http.post('/auth/logout')
 
 /* ---------------- 健康检查 ---------------- */
 export const getHealth = () => http.get('/health')
@@ -67,4 +79,3 @@ export const ocrDrug = (file) => {
 export const checkInteractions = (elderId) => http.post('/interactions/check', { elderId })
 export const checkDrugNames = (drugNames) => http.post('/interactions/check-drugs', { drugNames })
 export const listRules = () => http.get('/interactions/rules')
-

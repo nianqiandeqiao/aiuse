@@ -137,6 +137,16 @@ npm.cmd run build
 
 构建产物会输出到 `backend/src/main/resources/static/`（已被 .gitignore 忽略，不提交）。之后只要启动后端，打开 <http://localhost:8081/> 就是完整系统，答辩时只需开一个服务。
 
+### 7. 发布到公网给他人访问（可选）
+
+双击 `启动公网访问.bat`：脚本会要求你**先设一个访问口令**（不能为空），然后自动启动后端并建立一个 Cloudflare 免费临时隧道，窗口里会给出形如 `https://xxxx-xxxx.trycloudflare.com` 的公网地址，发给别人就能访问。
+
+安全性说明：公网地址任何人都能打开，但**没有输入口令看不到任何数据**——后端已加访问控制，未登录访问数据接口一律返回 401，只有输入正确口令后才能读写。前端静态页面本身不含数据，可以公开加载。
+
+限制：免费隧道地址随机且临时，每次重启都会变；你的电脑必须一直开机。更长期的方案（云服务器、HTTPS、开机自启）见 [docs/deploy.md](docs/deploy.md)。
+
+> 不要长期把公网地址挂在外面：真实老人数据属于敏感个人信息，正式使用前需要补账号权限、数据加密与合规措施。
+
 ## 第 1 天（10 月 2 日）交付与验收
 
 乔（后端）当日任务：搭后端环境、跑通骨架、确认数据库可用。
@@ -281,7 +291,7 @@ DELETE FROM medication_log; DELETE FROM medication_plan; DELETE FROM elder;
 
 | 测试 | 位置 | 特点 |
 | --- | --- | --- |
-| JUnit 测试 25 个 | `backend/src/test/java/com/aiuse/medreminder/` | 随 `mvn test` 运行，**不需要先启动服务** |
+| JUnit 测试 29 个 | `backend/src/test/java/com/aiuse/medreminder/` | 随 `mvn test` 运行，**不需要先启动服务** |
 | 接口冒烟测试 68 项断言 | `scripts/smoke-test.ps1` | 打真实 HTTP 接口，端到端验证，需要先启动后端 |
 
 JUnit 测试按三层组织：
@@ -292,6 +302,7 @@ JUnit 测试按三层组织：
 - `ElderApiTest`：接口层（MockMvc），验证统一响应体、参数校验 400、资源不存在 404、健康检查（6 个）
 - `DrugDictionaryTest`：药品别名词典，验证商品名归一到标准药名（4 个）
 - `InteractionServiceTest`：用药安全，验证严重冲突判定、重复用药、停用计划不参检、规则库完整性（6 个）
+- `AccessAuthTest`：访问口令，验证未登录 401、口令错误 400、登录后可访问（4 个）
 
 运行方式（项目根目录下）：
 

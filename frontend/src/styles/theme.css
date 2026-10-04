@@ -17,6 +17,8 @@
   --app-danger: #d32f2f;
   --app-warning: #e67e22;
   --app-notice: #7f8c8d;
+  /* 首页"用药计划"入口按钮底色（浏览器批注指定） */
+  --app-accent-plan: #f7e302;
 
   /* 覆盖 Element Plus 变量 */
   --el-color-primary: #1f4e79;
@@ -227,3 +229,16 @@ body {
   border-radius: var(--app-radius);
 }
 
+/* 首页"用药计划"入口：明黄底 + 深色字，保证适老化对比度 */
+.el-button.entry-button--plan {
+  background: var(--app-accent-plan);
+  border-color: var(--app-accent-plan);
+  color: var(--app-text);
+}
+
+.el-button.entry-button--plan:hover,
+.el-button.entry-button--plan:focus {
+  background: #e3d100;
+  border-color: #e3d100;
+  color: var(--app-text);
+}

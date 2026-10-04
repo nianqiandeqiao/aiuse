@@ -49,7 +49,7 @@
           </el-button>
         </el-col>
         <el-col :xs="24" :sm="12" :md="6">
-          <el-button class="entry-button" @click="go('/plans')">
+          <el-button class="entry-button entry-button--plan" @click="go('/plans')">
             💊 用药计划
           </el-button>
         </el-col>
@@ -114,4 +114,3 @@ onMounted(loadElders)
   color: #33404d;
 }
 </style>
-

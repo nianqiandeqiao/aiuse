@@ -1,5 +1,7 @@
 <template>
-  <el-container class="app-shell">
+  <router-view v-if="isLoginPage" />
+
+  <el-container v-else class="app-shell">
     <el-header class="app-header">
       <div class="brand">
         <span class="brand-logo">💊</span>
@@ -20,6 +22,7 @@
           inactive-text="语音开启"
           @change="onMuteChange"
         />
+        <el-button v-if="auth.required" size="large" @click="onLogout">退出</el-button>
       </div>
     </el-header>
 
@@ -39,16 +42,39 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useCurrentElder } from './stores/currentElder'
 import { isMuted, setMuted, speak } from './utils/speech'
+import { ensureAuthChecked, markLoggedOut, useAuth } from './stores/auth'
+import { logout } from './api'
 
 const route = useRoute()
+const router = useRouter()
 const { state } = useCurrentElder()
+const auth = useAuth()
 
 const muted = ref(isMuted())
 const activeMenu = computed(() => route.path)
+const isLoginPage = computed(() => route.path === '/login')
+
+onMounted(async () => {
+  const status = await ensureAuthChecked()
+  if (status.required && !status.loggedIn && !isLoginPage.value) {
+    router.replace('/login')
+  }
+})
+
+async function onLogout() {
+  try {
+    await logout()
+  } finally {
+    markLoggedOut()
+    ElMessage.success('已退出登录')
+    router.replace('/login')
+  }
+}
 
 function onMuteChange(value) {
   setMuted(value)
@@ -119,4 +145,3 @@ function onMuteChange(value) {
   background: var(--app-bg);
 }
 </style>
-

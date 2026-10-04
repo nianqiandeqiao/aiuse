@@ -22,3 +22,6 @@ backend/src/main/resources/static/
 # logs & temp
 *.log
 *.tmp
+
+# local tools (cloudflared for public sharing)
+tools/

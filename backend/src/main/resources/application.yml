@@ -33,6 +33,13 @@ baidu:
     token-url: https://aip.baidubce.com/oauth/2.0/token
     ocr-url: https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic
 
+app:
+  access:
+    # 访问口令：留空 = 不启用（本地演示）；发布到公网前必须设置，
+    # 推荐用环境变量注入而不写进文件：APP_ACCESS_PASSWORD
+    password: ${APP_ACCESS_PASSWORD:}
+    session-minutes: 720
+
 logging:
   level:
     root: info
