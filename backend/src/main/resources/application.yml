@@ -3,6 +3,10 @@ spring:
     name: med-reminder-backend
   profiles:
     active: local
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/med_reminder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
@@ -20,6 +24,14 @@ mybatis:
   type-aliases-package: com.aiuse.medreminder.entity
   configuration:
     map-underscore-to-camel-case: true
+
+baidu:
+  ocr:
+    # 密钥只写在 application-local.yml（已被 .gitignore 忽略），不要把真实密钥提交到 Git
+    api-key: ""
+    secret-key: ""
+    token-url: https://aip.baidubce.com/oauth/2.0/token
+    ocr-url: https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic
 
 logging:
   level:

@@ -4,3 +4,8 @@ spring:
     username: root
     password: 你的MySQL密码
 
+baidu:
+  ocr:
+    # 百度智能云 -> 应用管理 里的 API Key / Secret Key（通用文字识别）
+    api-key: 你的百度APIKey
+    secret-key: 你的百度SecretKey

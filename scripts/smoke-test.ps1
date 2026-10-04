@@ -284,6 +284,81 @@ Step "20. cleanup DELETE /plans/{id} and /elders/{id}" {
     Assert ($check.code -eq 404) "deleted elder returns code=404"
 }
 
+# 21. OCR: draw a drug photo with GDI+, then upload it to the OCR endpoint
+Step "21. OCR recognize drug photo POST /ocr/drug" {
+    Add-Type -AssemblyName System.Drawing
+    $imgPath = Join-Path $env:TEMP "smoke-drug.png"
+    $bmp = New-Object System.Drawing.Bitmap 900, 320
+    $graphics = [System.Drawing.Graphics]::FromImage($bmp)
+    $graphics.Clear([System.Drawing.Color]::White)
+    $font = New-Object System.Drawing.Font("Microsoft YaHei", 46)
+    $graphics.DrawString(($drugName + (Zh @(0x80A0, 0x6EB6, 0x7247))), $font, [System.Drawing.Brushes]::Black, 20, 30)
+    $graphics.DrawString(($drugName2 + (Zh @(0x94A0, 0x7247))), $font, [System.Drawing.Brushes]::Black, 20, 160)
+    $graphics.Dispose()
+    $bmp.Save($imgPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+
+    $outFile = Join-Path $env:TEMP "smoke-ocr.json"
+    curl.exe -sS --max-time 60 -X POST -F "file=@$imgPath" "$BaseUrl/ocr/drug" -o $outFile | Out-Null
+    $r = [System.IO.File]::ReadAllText($outFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+    Assert ($r.code -eq 0) "ocr code=0"
+    Assert ($r.data.lineCount -ge 2) "ocr recognized lines = $($r.data.lineCount)"
+    Assert ($r.data.drugCount -ge 2) "ocr matched drugs = $($r.data.drugCount)"
+    $names = $r.data.drugs | ForEach-Object { $_.standardName }
+    Assert ($names -contains $drugName) "matched standard drug: $drugName"
+    Assert ($names -contains $drugName2) "matched standard drug: $drugName2"
+}
+
+# 22. interaction check by drug names: warfarin + aspirin should be a severe conflict
+Step "22. interaction check by drug names POST /interactions/check-drugs" {
+    $r = Invoke-Api -Method Post -Path "/interactions/check-drugs" -Body @{
+        drugNames = @($drugName2, $drugName)
+    }
+    Assert ($r.code -eq 0) "check code=0"
+    Assert ($r.data.conflictCount -ge 1) "conflict count = $($r.data.conflictCount)"
+    Assert ($r.data.maxSeverity -eq 1) "max severity = $($r.data.maxSeverity) ($($r.data.maxSeverityLabel))"
+    $first = $r.data.conflicts[0]
+    Assert ($first.type -eq "INTERACTION") "conflict type = $($first.type)"
+    Assert ($null -ne $first.source) "rule source present: $($first.source)"
+}
+
+# 23. interaction rule library
+Step "23. interaction rules GET /interactions/rules" {
+    $r = Invoke-Api -Method Get -Path "/interactions/rules"
+    Assert ($r.code -eq 0) "rules code=0"
+    Assert ($r.data.Count -ge 10) "rule count = $($r.data.Count)"
+}
+
+# 24. interaction check by elder (creates two plans: aspirin + warfarin)
+Step "24. interaction check by elder POST /interactions/check" {
+    $e = Invoke-Api -Method Post -Path "/elders" -Body @{
+        name = (Zh @(0x51B2, 0x7A81, 0x6D4B, 0x8BD5))   # conflict test elder
+        age  = 81
+    }
+    $p1 = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId     = $e.data.id
+        drugName    = $drugName
+        dosage      = "1 tablet"
+        remindTimes = "08:00"
+        startDate   = $today
+    }
+    $p2 = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId     = $e.data.id
+        drugName    = $drugName2
+        dosage      = "1 tablet"
+        remindTimes = "20:00"
+        startDate   = $today
+    }
+    $r = Invoke-Api -Method Post -Path "/interactions/check" -Body @{ elderId = $e.data.id }
+    Assert ($r.code -eq 0) "elder check code=0"
+    Assert ($r.data.drugCount -eq 2) "checked drugs = $($r.data.drugCount)"
+    Assert ($r.data.maxSeverity -eq 1) "elder conflict max severity = $($r.data.maxSeverity)"
+
+    Invoke-Api -Method Delete -Path "/plans/$($p1.data.id)" | Out-Null
+    Invoke-Api -Method Delete -Path "/plans/$($p2.data.id)" | Out-Null
+    Invoke-Api -Method Delete -Path "/elders/$($e.data.id)" | Out-Null
+}
+
 Write-Host ""
 Write-Host "----------------------------------------"
 Write-Host ("PASS: {0}   FAIL: {1}" -f $script:passed, $script:failed)
