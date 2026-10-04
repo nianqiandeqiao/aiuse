@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aiuse.medreminder.mapper.AppUserMapper">
+
+    <resultMap id="UserMap" type="com.aiuse.medreminder.entity.AppUser">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="display_name" property="displayName"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <sql id="columns">id, username, display_name, password_hash, created_at</sql>
+
+    <insert id="insert" parameterType="com.aiuse.medreminder.entity.AppUser"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO app_user (username, display_name, password_hash)
+        VALUES (#{username}, #{displayName}, #{passwordHash})
+    </insert>
+
+    <select id="findByUsername" resultMap="UserMap">
+        SELECT <include refid="columns"/> FROM app_user WHERE username = #{username}
+    </select>
+
+    <select id="findById" resultMap="UserMap">
+        SELECT <include refid="columns"/> FROM app_user WHERE id = #{id}
+    </select>
+
+    <select id="countUsers" resultType="int">
+        SELECT COUNT(*) FROM app_user
+    </select>
+
+    <update id="claimOrphanElders">
+        UPDATE elder SET owner_id = #{ownerId} WHERE owner_id IS NULL
+    </update>
+</mapper>

@@ -11,6 +11,9 @@
         </div>
       </div>
       <div class="brand-right">
+        <el-tag v-if="auth.loggedIn" type="warning" size="large" effect="dark">
+          {{ auth.user?.displayName || auth.user?.username }}
+        </el-tag>
         <el-tag v-if="state.elder" type="success" size="large" effect="dark">
           当前老人：{{ state.elder.name }}
         </el-tag>
@@ -22,7 +25,7 @@
           inactive-text="语音开启"
           @change="onMuteChange"
         />
-        <el-button v-if="auth.required" size="large" @click="onLogout">退出</el-button>
+        <el-button v-if="auth.loggedIn" size="large" @click="onLogout">退出</el-button>
       </div>
     </el-header>
 
@@ -48,7 +51,7 @@ import { ElMessage } from 'element-plus'
 import { useCurrentElder } from './stores/currentElder'
 import { isMuted, setMuted, speak } from './utils/speech'
 import { ensureAuthChecked, markLoggedOut, useAuth } from './stores/auth'
-import { logout } from './api'
+import { logoutUser } from './api'
 
 const route = useRoute()
 const router = useRouter()
@@ -61,17 +64,17 @@ const isLoginPage = computed(() => route.path === '/login')
 
 onMounted(async () => {
   const status = await ensureAuthChecked()
-  if (status.required && !status.loggedIn && !isLoginPage.value) {
+  if (!status.loggedIn && !isLoginPage.value) {
     router.replace('/login')
   }
 })
 
 async function onLogout() {
   try {
-    await logout()
+    await logoutUser()
   } finally {
     markLoggedOut()
-    ElMessage.success('已退出登录')
+    ElMessage.success('已安全退出')
     router.replace('/login')
   }
 }

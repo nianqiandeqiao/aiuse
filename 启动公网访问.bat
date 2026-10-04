@@ -38,18 +38,9 @@ if not exist "tools\cloudflared.exe" (
 )
 
 echo.
-echo Visitors must type this password to see any data.
-echo Do NOT leave it empty: the URL is public.
-set /p ACCESS_PW=Set access password: 
-if "%ACCESS_PW%"=="" (
-  echo [ERROR] Empty password is refused for public access.
-  pause
-  exit /b 1
-)
-set "APP_ACCESS_PASSWORD=%ACCESS_PW%"
-
-echo.
-echo Starting backend with the access password...
+echo Starting backend...
+echo Each visitor must register or log in with their own account,
+echo and can only see their own elders and medications.
 start "med-backend" cmd /c "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-backend.ps1"
 echo Waiting for the backend to become ready...
 timeout /t 22 /nobreak >nul
@@ -61,4 +52,3 @@ echo Send that URL to others. Press Ctrl+C here to stop sharing.
 echo.
 "tools\cloudflared.exe" tunnel --url http://localhost:8081 --no-autoupdate
 pause
-

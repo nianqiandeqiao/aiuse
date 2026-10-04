@@ -6,6 +6,7 @@ import com.aiuse.medreminder.entity.MedicationPlan;
 import com.aiuse.medreminder.mapper.ElderMapper;
 import com.aiuse.medreminder.mapper.InteractionRuleMapper;
 import com.aiuse.medreminder.mapper.MedicationPlanMapper;
+import com.aiuse.medreminder.security.CurrentUserHolder;
 import com.aiuse.medreminder.vo.InteractionCheckResult;
 import com.aiuse.medreminder.vo.InteractionConflict;
 import org.springframework.stereotype.Service;
@@ -40,11 +41,12 @@ public class InteractionService {
         this.drugDictionary = drugDictionary;
     }
 
-    /** 检查某位老人全部"进行中"用药计划之间的冲突。 */
+    /** 检查某位老人全部"进行中"用药计划之间的冲突（只能检查自己的老人）。 */
     public InteractionCheckResult checkByElder(long elderId) {
-        elderMapper.findById(elderId)
+        long ownerId = CurrentUserHolder.requireUserId();
+        elderMapper.findById(elderId, ownerId)
                 .orElseThrow(() -> BizException.notFound("老人档案不存在: id=" + elderId));
-        List<String> drugs = planMapper.findActiveByElderId(elderId).stream()
+        List<String> drugs = planMapper.findActiveByElderId(elderId, ownerId).stream()
                 .map(MedicationPlan::getDrugName)
                 .filter(name -> name != null && !name.isBlank())
                 .map(drugDictionary::standardize)
@@ -52,8 +54,9 @@ public class InteractionService {
         return doCheck(elderId, drugs);
     }
 
-    /** 直接检查一组药名，用于开药前预检。 */
+    /** 直接检查一组药名，用于开药前预检（不涉及数据库数据，无需归属校验）。 */
     public InteractionCheckResult checkDrugNames(List<String> rawDrugNames) {
+        CurrentUserHolder.requireUserId();
         List<String> drugs = rawDrugNames.stream()
                 .filter(name -> name != null && !name.isBlank())
                 .map(String::trim)
@@ -62,7 +65,7 @@ public class InteractionService {
         return doCheck(null, drugs);
     }
 
-    /** 规则库列表，答辩演示用。 */
+    /** 规则库列表，答辩演示用（全局共享，不含个人信息）。 */
     public List<InteractionRule> listRules() {
         return ruleMapper.findAll();
     }
@@ -137,3 +140,4 @@ public class InteractionService {
         return conflicts;
     }
 }
+

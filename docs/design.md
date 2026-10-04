@@ -94,25 +94,43 @@ POST /api/interactions/check {elderId}
 
 严重程度分三级：`1 严重`、`2 警告`、`3 注意`。规则库存在数据库表中，可随时扩展或停用某条规则。
 
+### 3.6 用户与权限模块（数据隔离）
+
+```
+注册/登录 → 服务端写 session（HttpSession，7 天有效）
+   → UserAuthFilter 每个请求解析 session，把当前用户放入 CurrentUserHolder
+   → Service 层取当前用户 id，所有 SQL 都带 owner_id 条件
+```
+
+隔离规则：
+
+- 老人档案用 `owner_id` 归属账号；用药计划、打卡记录没有独立 owner 字段，全部通过 `join elder` 判断归属
+- 查询别人的数据统一返回 `404 老人档案不存在`，不返回"无权限"，避免泄露数据是否存在
+- 未登录访问任何数据接口返回 HTTP 401，前端自动跳转登录页
+- 密码用 `PBKDF2WithHmacSHA256`（随机盐 + 12 万次迭代）存储，校验时用定长比较
+- 越权写入不仅被拦截，还会保持数据原样（有单元测试专门验证"篡改尝试后数据未变"）
+
 ## 4. 数据库设计
 
 ### 4.1 表关系
 
 ```
-elder (老人档案)
+app_user (系统账号)
   │ 1
-  ├──────── n  medication_plan (用药计划)
-  │                 │ 1
-  │                 └──────── n  medication_log (服药打卡)
-  │
-interaction_rule (相互作用规则库，独立字典表)
+  └──────── n  elder (老人档案, owner_id 指向账号)
+                   │ 1
+                   ├──────── n  medication_plan (用药计划)
+                   │                 │ 1
+                   │                 └──────── n  medication_log (服药打卡)
+interaction_rule (相互作用规则库，全局字典表，不含个人信息)
 ```
 
 ### 4.2 表结构说明
 
 | 表 | 说明 | 关键字段 |
 | --- | --- | --- |
-| `elder` | 老人档案 | `name`、`age`、`gender`、`phone`、`chronic_disease`、`note`、`deleted`（逻辑删除） |
+| `app_user` | 系统账号 | `username`（唯一）、`display_name`、`password_hash`（PBKDF2 加盐） |
+| `elder` | 老人档案 | `owner_id`（所属账号，数据隔离的关键字段）、`name`、`age`、`gender`、`phone`、`chronic_disease`、`note`、`deleted`（逻辑删除） |
 | `medication_plan` | 用药计划 | `elder_id`、`drug_name`、`dosage`、`frequency`、`take_relation`（饭前/饭后/睡前）、`remind_times`、`start_date`、`end_date`、`status` |
 | `medication_log` | 服药打卡 | `elder_id`、`plan_id`、`take_date`、`remind_time`、`take_time`、`status`（TAKEN/MISSED），唯一索引 `plan_id+take_date+remind_time` |
 | `interaction_rule` | 相互作用规则库 | `drug_a`、`drug_b`、`severity`、`title`、`description`、`advice`、`source`、`enabled`，唯一索引 `drug_a+drug_b` |
@@ -157,4 +175,3 @@ interaction_rule (相互作用规则库，独立字典表)
 - 规则库目前 11 条，覆盖常见组合；后续可接入权威数据源扩充
 - 未做登录鉴权，属于演示版；正式版需增加账号体系与家属-老人绑定关系
 - 打卡提醒依赖前端页面打开，后续可增加微信/短信推送
-

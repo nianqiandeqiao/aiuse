@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 public class Elder {
 
     private Long id;
+    /** 档案归属的用户 id：只有本人能看到和修改。 */
+    private Long ownerId;
     private String name;
     private Integer age;
     private String gender;
@@ -21,4 +23,3 @@ public class Elder {
     private LocalDateTime updatedAt;
     private Boolean deleted;
 }
-

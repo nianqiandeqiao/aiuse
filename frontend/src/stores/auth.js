@@ -1,13 +1,15 @@
 import { reactive } from 'vue'
-import { authStatus } from '../api'
+import { authStatus, currentUser } from '../api'
 
 const state = reactive({
-  required: false,
-  loggedIn: true,
+  required: true,
+  loggedIn: false,
+  allowRegister: true,
+  user: null,
   checked: false
 })
 
-/** 查询一次访问口令状态（结果会缓存，避免每次路由都请求） */
+/** 查询登录状态（结果缓存，避免每次路由都请求） */
 export async function ensureAuthChecked(force = false) {
   if (state.checked && !force) {
     return state
@@ -16,10 +18,11 @@ export async function ensureAuthChecked(force = false) {
     const data = await authStatus()
     state.required = !!data.required
     state.loggedIn = !!data.loggedIn
+    state.allowRegister = data.allowRegister !== false
+    state.user = data.loggedIn ? await currentUser() : null
   } catch (e) {
-    // 网络异常时不阻塞使用，由具体接口的报错提示
-    state.required = false
-    state.loggedIn = true
+    state.loggedIn = false
+    state.user = null
   }
   state.checked = true
   return state
@@ -29,14 +32,15 @@ export function useAuth() {
   return state
 }
 
-export function markLoggedIn() {
+export function markLoggedIn(user) {
   state.checked = true
-  state.required = true
   state.loggedIn = true
+  state.user = user
 }
 
 export function markLoggedOut() {
   state.checked = true
   state.loggedIn = false
+  state.user = null
 }
 

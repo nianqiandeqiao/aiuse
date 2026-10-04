@@ -15,8 +15,8 @@
         <result column="created_at" property="createdAt"/>
     </resultMap>
 
-    <sql id="columns">
-        id, elder_id, plan_id, take_date, remind_time, take_time, status, note, created_at
+    <sql id="logColumns">
+        l.id, l.elder_id, l.plan_id, l.take_date, l.remind_time, l.take_time, l.status, l.note, l.created_at
     </sql>
 
     <insert id="insert" parameterType="com.aiuse.medreminder.entity.MedicationLog"
@@ -26,46 +26,60 @@
     </insert>
 
     <select id="findById" resultMap="LogMap">
-        SELECT <include refid="columns"/> FROM medication_log WHERE id = #{id}
+        SELECT <include refid="logColumns"/>
+        FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.id = #{id} AND e.deleted = 0 AND e.owner_id = #{ownerId}
     </select>
 
     <select id="findByElderId" resultMap="LogMap">
-        SELECT <include refid="columns"/>
-        FROM medication_log
-        WHERE elder_id = #{elderId}
-        ORDER BY take_date DESC, remind_time ASC, id ASC
+        SELECT <include refid="logColumns"/>
+        FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.elder_id = #{elderId} AND e.deleted = 0 AND e.owner_id = #{ownerId}
+        ORDER BY l.take_date DESC, l.remind_time ASC, l.id ASC
     </select>
 
     <select id="findByElderIdAndDate" resultMap="LogMap">
-        SELECT <include refid="columns"/>
-        FROM medication_log
-        WHERE elder_id = #{elderId} AND take_date = #{takeDate}
-        ORDER BY remind_time ASC, id ASC
+        SELECT <include refid="logColumns"/>
+        FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.elder_id = #{elderId} AND l.take_date = #{takeDate}
+        AND e.deleted = 0 AND e.owner_id = #{ownerId}
+        ORDER BY l.remind_time ASC, l.id ASC
     </select>
 
     <select id="findByElderIdAndDateRange" resultMap="LogMap">
-        SELECT <include refid="columns"/>
-        FROM medication_log
-        WHERE elder_id = #{elderId} AND take_date BETWEEN #{from} AND #{to}
-        ORDER BY take_date DESC, remind_time ASC, id ASC
+        SELECT <include refid="logColumns"/>
+        FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.elder_id = #{elderId} AND l.take_date BETWEEN #{from} AND #{to}
+        AND e.deleted = 0 AND e.owner_id = #{ownerId}
+        ORDER BY l.take_date DESC, l.remind_time ASC, l.id ASC
     </select>
 
     <select id="findByPlanIdAndDateAndRemindTime" resultMap="LogMap">
-        SELECT <include refid="columns"/>
-        FROM medication_log
-        WHERE plan_id = #{planId} AND take_date = #{takeDate} AND remind_time = #{remindTime}
+        SELECT <include refid="logColumns"/>
+        FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.plan_id = #{planId} AND l.take_date = #{takeDate} AND l.remind_time = #{remindTime}
+        AND e.deleted = 0 AND e.owner_id = #{ownerId}
     </select>
 
     <select id="countByStatusInRange" resultType="int">
         SELECT COUNT(*)
-        FROM medication_log
-        WHERE elder_id = #{elderId}
-        AND take_date BETWEEN #{from} AND #{to}
-        AND status = #{status}
+        FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.elder_id = #{elderId}
+        AND l.take_date BETWEEN #{from} AND #{to}
+        AND l.status = #{status}
+        AND e.deleted = 0 AND e.owner_id = #{ownerId}
     </select>
 
     <delete id="deleteById">
-        DELETE FROM medication_log WHERE id = #{id}
+        DELETE l FROM medication_log l
+        JOIN elder e ON e.id = l.elder_id
+        WHERE l.id = #{id} AND e.owner_id = #{ownerId}
     </delete>
 </mapper>
 

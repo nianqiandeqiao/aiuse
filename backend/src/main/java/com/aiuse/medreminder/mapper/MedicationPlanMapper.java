@@ -8,25 +8,27 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 用药计划 Mapper（持久层），SQL 写在 resources/mapper/MedicationPlanMapper.xml。
+ * 用药计划 Mapper。计划本身没有 owner_id，归属通过 elder.owner_id 判断，
+ * 所有查询都 join elder 并带 ownerId 条件。
  */
 @Mapper
 public interface MedicationPlanMapper {
 
     int insert(MedicationPlan plan);
 
-    Optional<MedicationPlan> findById(@Param("id") long id);
+    Optional<MedicationPlan> findById(@Param("id") long id, @Param("ownerId") long ownerId);
 
-    List<MedicationPlan> findByElderId(@Param("elderId") long elderId);
+    List<MedicationPlan> findByElderId(@Param("elderId") long elderId, @Param("ownerId") long ownerId);
 
-    List<MedicationPlan> findActiveByElderId(@Param("elderId") long elderId);
+    List<MedicationPlan> findActiveByElderId(@Param("elderId") long elderId,
+                                             @Param("ownerId") long ownerId);
 
-    int update(MedicationPlan plan);
+    int update(@Param("plan") MedicationPlan plan, @Param("ownerId") long ownerId);
 
-    int updateStatus(@Param("id") long id, @Param("status") int status);
+    int updateStatus(@Param("id") long id, @Param("status") int status,
+                     @Param("ownerId") long ownerId);
 
-    int softDelete(@Param("id") long id);
+    int softDelete(@Param("id") long id, @Param("ownerId") long ownerId);
 
-    int softDeleteByElderId(@Param("elderId") long elderId);
+    int softDeleteByElderId(@Param("elderId") long elderId, @Param("ownerId") long ownerId);
 }
-

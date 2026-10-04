@@ -9,33 +9,37 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 服药打卡 Mapper（持久层），SQL 写在 resources/mapper/MedicationLogMapper.xml。
+ * 服药打卡 Mapper。归属通过 elder.owner_id 判断。
  */
 @Mapper
 public interface MedicationLogMapper {
 
     int insert(MedicationLog log);
 
-    Optional<MedicationLog> findById(@Param("id") long id);
+    Optional<MedicationLog> findById(@Param("id") long id, @Param("ownerId") long ownerId);
 
-    List<MedicationLog> findByElderId(@Param("elderId") long elderId);
+    List<MedicationLog> findByElderId(@Param("elderId") long elderId, @Param("ownerId") long ownerId);
 
     List<MedicationLog> findByElderIdAndDate(@Param("elderId") long elderId,
-                                             @Param("takeDate") LocalDate takeDate);
+                                             @Param("takeDate") LocalDate takeDate,
+                                             @Param("ownerId") long ownerId);
 
     List<MedicationLog> findByElderIdAndDateRange(@Param("elderId") long elderId,
                                                   @Param("from") LocalDate from,
-                                                  @Param("to") LocalDate to);
+                                                  @Param("to") LocalDate to,
+                                                  @Param("ownerId") long ownerId);
 
     Optional<MedicationLog> findByPlanIdAndDateAndRemindTime(@Param("planId") long planId,
                                                              @Param("takeDate") LocalDate takeDate,
-                                                             @Param("remindTime") String remindTime);
+                                                             @Param("remindTime") String remindTime,
+                                                             @Param("ownerId") long ownerId);
 
     int countByStatusInRange(@Param("elderId") long elderId,
                              @Param("from") LocalDate from,
                              @Param("to") LocalDate to,
-                             @Param("status") String status);
+                             @Param("status") String status,
+                             @Param("ownerId") long ownerId);
 
-    int deleteById(@Param("id") long id);
+    int deleteById(@Param("id") long id, @Param("ownerId") long ownerId);
 }
 

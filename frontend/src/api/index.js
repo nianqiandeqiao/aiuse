@@ -38,10 +38,12 @@ http.interceptors.response.use(
   }
 )
 
-/* ---------------- 访问口令 ---------------- */
+/* ---------------- 账号 ---------------- */
 export const authStatus = () => http.get('/auth/status')
-export const login = (password) => http.post('/auth/login', { password })
-export const logout = () => http.post('/auth/logout')
+export const registerUser = (data) => http.post('/auth/register', data)
+export const loginUser = (data) => http.post('/auth/login', data)
+export const logoutUser = () => http.post('/auth/logout')
+export const currentUser = () => http.get('/auth/me')
 
 /* ---------------- 健康检查 ---------------- */
 export const getHealth = () => http.get('/health')

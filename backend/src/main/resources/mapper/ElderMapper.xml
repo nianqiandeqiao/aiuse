@@ -5,6 +5,7 @@
 
     <resultMap id="ElderMap" type="com.aiuse.medreminder.entity.Elder">
         <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
         <result column="name" property="name"/>
         <result column="age" property="age"/>
         <result column="gender" property="gender"/>
@@ -17,26 +18,26 @@
     </resultMap>
 
     <sql id="columns">
-        id, name, age, gender, phone, chronic_disease, note, created_at, updated_at, deleted
+        id, owner_id, name, age, gender, phone, chronic_disease, note, created_at, updated_at, deleted
     </sql>
 
     <insert id="insert" parameterType="com.aiuse.medreminder.entity.Elder"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO elder (name, age, gender, phone, chronic_disease, note)
-        VALUES (#{name}, #{age}, #{gender}, #{phone}, #{chronicDisease}, #{note})
+        INSERT INTO elder (owner_id, name, age, gender, phone, chronic_disease, note)
+        VALUES (#{ownerId}, #{name}, #{age}, #{gender}, #{phone}, #{chronicDisease}, #{note})
     </insert>
 
     <select id="findAll" resultMap="ElderMap">
         SELECT <include refid="columns"/>
         FROM elder
-        WHERE deleted = 0
+        WHERE deleted = 0 AND owner_id = #{ownerId}
         ORDER BY id DESC
     </select>
 
     <select id="search" resultMap="ElderMap">
         SELECT <include refid="columns"/>
         FROM elder
-        WHERE deleted = 0
+        WHERE deleted = 0 AND owner_id = #{ownerId}
         AND (name LIKE CONCAT('%', #{keyword}, '%')
         OR phone LIKE CONCAT('%', #{keyword}, '%')
         OR chronic_disease LIKE CONCAT('%', #{keyword}, '%'))
@@ -44,6 +45,12 @@
     </select>
 
     <select id="findById" resultMap="ElderMap">
+        SELECT <include refid="columns"/>
+        FROM elder
+        WHERE id = #{id} AND owner_id = #{ownerId} AND deleted = 0
+    </select>
+
+    <select id="findByIdIgnoreOwner" resultMap="ElderMap">
         SELECT <include refid="columns"/>
         FROM elder
         WHERE id = #{id} AND deleted = 0
@@ -57,11 +64,11 @@
             phone = #{phone},
             chronic_disease = #{chronicDisease},
             note = #{note}
-        WHERE id = #{id} AND deleted = 0
+        WHERE id = #{id} AND owner_id = #{ownerId} AND deleted = 0
     </update>
 
     <update id="softDelete">
-        UPDATE elder SET deleted = 1 WHERE id = #{id} AND deleted = 0
+        UPDATE elder SET deleted = 1 WHERE id = #{id} AND owner_id = #{ownerId} AND deleted = 0
     </update>
 </mapper>
 

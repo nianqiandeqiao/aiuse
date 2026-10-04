@@ -6,6 +6,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -32,5 +33,33 @@ public class DatabaseInitializer implements ApplicationRunner {
         populator.setContinueOnError(false);
         populator.execute(dataSource);
         log.info("schema.sql 执行完成，三张核心表已就绪");
+
+        migrateOwnerColumn(dataSource);
+    }
+
+    /**
+     * 轻量迁移：老版本数据库没有 owner_id 列，这里检测后补上，
+     * 保证已有环境升级后不用手工改表。
+     */
+    private void migrateOwnerColumn(DataSource dataSource) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        Integer columnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'elder' AND COLUMN_NAME = 'owner_id'",
+                Integer.class);
+        if (columnCount == null || columnCount == 0) {
+            jdbcTemplate.execute(
+                    "ALTER TABLE elder ADD COLUMN owner_id BIGINT NULL COMMENT '所属用户ID' AFTER id");
+            log.info("已为 elder 表新增 owner_id 列（数据归属用户）");
+        }
+        Integer indexCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.STATISTICS "
+                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'elder' "
+                        + "AND INDEX_NAME = 'idx_elder_owner'",
+                Integer.class);
+        if (indexCount == null || indexCount == 0) {
+            jdbcTemplate.execute("CREATE INDEX idx_elder_owner ON elder (owner_id)");
+            log.info("已为 elder.owner_id 建索引");
+        }
     }
 }

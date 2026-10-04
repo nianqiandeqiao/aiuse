@@ -15,6 +15,18 @@ CREATE TABLE IF NOT EXISTS elder (
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci COMMENT = '老人档案';
 
+CREATE TABLE IF NOT EXISTS app_user (
+    id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    username      VARCHAR(50)  NOT NULL COMMENT '登录用户名',
+    display_name  VARCHAR(50)  NULL COMMENT '显示名称,如 家属姓名',
+    password_hash VARCHAR(200) NOT NULL COMMENT '密码哈希(PBKDF2,格式 iterations:salt:hash)',
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_user_username (username)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统用户';
+
 CREATE TABLE IF NOT EXISTS medication_plan (
     id            BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     elder_id      BIGINT       NOT NULL COMMENT '老人ID',
@@ -118,4 +130,3 @@ INSERT IGNORE INTO interaction_rule (drug_a, drug_b, severity, title, descriptio
  '两药联用是常见的双抗方案，但会明显增加出血风险，需要医生评估获益与风险。',
  '严格按医嘱服用，注意观察皮肤瘀斑、牙龈出血、黑便等出血征象。',
  '《硫酸氢氯吡格雷片说明书》药物相互作用项');
-

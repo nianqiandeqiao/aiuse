@@ -7,6 +7,7 @@ import com.aiuse.medreminder.entity.MedicationPlan;
 import com.aiuse.medreminder.mapper.ElderMapper;
 import com.aiuse.medreminder.mapper.MedicationLogMapper;
 import com.aiuse.medreminder.mapper.MedicationPlanMapper;
+import com.aiuse.medreminder.security.CurrentUserHolder;
 import com.aiuse.medreminder.vo.CheckinStats;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.util.List;
 
 /**
  * 服药打卡业务层：打卡、撤销、查询与按时率统计。
+ * 只能操作自己老人的计划与打卡记录。
  */
 @Service
 public class CheckinService {
@@ -37,8 +39,9 @@ public class CheckinService {
     }
 
     public MedicationLog checkin(CheckinRequest request) {
-        requireElder(request.elderId());
-        MedicationPlan plan = planMapper.findById(request.planId())
+        long ownerId = CurrentUserHolder.requireUserId();
+        requireOwnedElder(request.elderId(), ownerId);
+        MedicationPlan plan = planMapper.findById(request.planId(), ownerId)
                 .orElseThrow(() -> BizException.notFound("用药计划不存在: id=" + request.planId()));
         if (!plan.getElderId().equals(request.elderId())) {
             throw BizException.badRequest("用药计划 " + plan.getId() + " 不属于老人 " + request.elderId());
@@ -47,7 +50,7 @@ public class CheckinService {
                 ? DEFAULT_REMIND_TIME : request.remindTime();
         String status = request.status() == null || request.status().isBlank()
                 ? DEFAULT_STATUS : request.status();
-        if (logMapper.findByPlanIdAndDateAndRemindTime(plan.getId(), request.takeDate(), remindTime)
+        if (logMapper.findByPlanIdAndDateAndRemindTime(plan.getId(), request.takeDate(), remindTime, ownerId)
                 .isPresent()) {
             throw BizException.badRequest("该计划在 " + request.takeDate() + " " + remindTime
                     + " 已打卡，请勿重复提交");
@@ -62,16 +65,14 @@ public class CheckinService {
         log.setStatus(status);
         log.setNote(request.note());
         logMapper.insert(log);
-        return logMapper.findById(log.getId()).orElseThrow();
+        return logMapper.findById(log.getId(), ownerId).orElseThrow();
     }
 
-    /**
-     * 查询打卡记录：date 优先；否则用 from/to 区间；都不传则返回全部。
-     */
     public List<MedicationLog> listByElder(long elderId, LocalDate date, LocalDate from, LocalDate to) {
-        requireElder(elderId);
+        long ownerId = CurrentUserHolder.requireUserId();
+        requireOwnedElder(elderId, ownerId);
         if (date != null) {
-            return logMapper.findByElderIdAndDate(elderId, date);
+            return logMapper.findByElderIdAndDate(elderId, date, ownerId);
         }
         if (from != null || to != null) {
             LocalDate start = from != null ? from : to;
@@ -79,14 +80,15 @@ public class CheckinService {
             if (start.isAfter(end)) {
                 throw BizException.badRequest("开始日期不能晚于结束日期");
             }
-            return logMapper.findByElderIdAndDateRange(elderId, start, end);
+            return logMapper.findByElderIdAndDateRange(elderId, start, end, ownerId);
         }
-        return logMapper.findByElderId(elderId);
+        return logMapper.findByElderId(elderId, ownerId);
     }
 
     /** 撤销误打卡（物理删除该条记录）。 */
     public void undo(long logId) {
-        if (logMapper.deleteById(logId) == 0) {
+        long ownerId = CurrentUserHolder.requireUserId();
+        if (logMapper.deleteById(logId, ownerId) == 0) {
             throw BizException.notFound("打卡记录不存在: id=" + logId);
         }
     }
@@ -96,7 +98,8 @@ public class CheckinService {
      * 已服次数来自该区间内状态为 TAKEN 的打卡记录。
      */
     public CheckinStats stats(long elderId, LocalDate from, LocalDate to) {
-        requireElder(elderId);
+        long ownerId = CurrentUserHolder.requireUserId();
+        requireOwnedElder(elderId, ownerId);
         LocalDate end = to != null ? to : LocalDate.now();
         LocalDate start = from != null ? from : end.minusDays(6);
         if (start.isAfter(end)) {
@@ -106,7 +109,7 @@ public class CheckinService {
             throw BizException.badRequest("统计区间不能超过 " + MAX_STATS_DAYS + " 天");
         }
 
-        List<MedicationPlan> plans = planMapper.findActiveByElderId(elderId);
+        List<MedicationPlan> plans = planMapper.findActiveByElderId(elderId, ownerId);
         int expected = 0;
         for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
             for (MedicationPlan plan : plans) {
@@ -116,14 +119,14 @@ public class CheckinService {
             }
         }
 
-        int taken = logMapper.countByStatusInRange(elderId, start, end, "TAKEN");
+        int taken = logMapper.countByStatusInRange(elderId, start, end, "TAKEN", ownerId);
         int missed = Math.max(0, expected - taken);
         double rate = expected == 0 ? 0d : Math.round(taken * 1000.0 / expected) / 1000.0;
         return new CheckinStats(elderId, start, end, expected, taken, missed, rate);
     }
 
-    private void requireElder(long elderId) {
-        elderMapper.findById(elderId)
+    private void requireOwnedElder(long elderId, long ownerId) {
+        elderMapper.findById(elderId, ownerId)
                 .orElseThrow(() -> BizException.notFound("老人档案不存在: id=" + elderId));
     }
 }

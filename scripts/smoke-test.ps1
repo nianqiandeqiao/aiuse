@@ -7,6 +7,8 @@ $ErrorActionPreference = 'Stop'
 
 $script:passed = 0
 $script:failed = 0
+# Every data API requires login now; the whole script reuses one session.
+$script:session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 
 function Invoke-Api {
     param(
@@ -19,9 +21,9 @@ function Invoke-Api {
         $json = $Body | ConvertTo-Json -Depth 6
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
         $resp = Invoke-WebRequest -Uri $uri -Method $Method -Body $bytes `
-            -ContentType "application/json; charset=utf-8" -UseBasicParsing
+            -ContentType "application/json; charset=utf-8" -UseBasicParsing -WebSession $script:session
     } else {
-        $resp = Invoke-WebRequest -Uri $uri -Method $Method -UseBasicParsing
+        $resp = Invoke-WebRequest -Uri $uri -Method $Method -UseBasicParsing -WebSession $script:session
     }
     $text = [System.Text.Encoding]::UTF8.GetString($resp.RawContentStream.ToArray())
     return $text | ConvertFrom-Json
@@ -74,6 +76,18 @@ if (-not $health) {
     Write-Host ""
     Write-Host "Backend is not reachable. Start it first: scripts/run-backend.ps1" -ForegroundColor Red
     exit 1
+}
+
+# 1.5 register a test account (required because data APIs need login)
+Step "1.5 register test account POST /auth/register" {
+    $username = "smoke" + (Get-Date -Format "MMddHHmmss")
+    $r = Invoke-Api -Method Post -Path "/auth/register" -Body @{
+        username    = $username
+        password    = "smoke123456"
+        displayName = "smoke test"
+    }
+    Assert ($r.code -eq 0) "register code=0"
+    Assert ($r.data.username -eq $username) "registered username = $username"
 }
 
 # 2. create elder
@@ -299,7 +313,12 @@ Step "21. OCR recognize drug photo POST /ocr/drug" {
     $bmp.Dispose()
 
     $outFile = Join-Path $env:TEMP "smoke-ocr.json"
-    curl.exe -sS --max-time 60 -X POST -F "file=@$imgPath" "$BaseUrl/ocr/drug" -o $outFile | Out-Null
+    # curl does not share the PowerShell session, so pass the login cookie manually
+    $cookie = $script:session.Cookies.GetCookies([Uri]$BaseUrl) |
+        Where-Object { $_.Name -eq "JSESSIONID" } | Select-Object -First 1
+    $cookieHeader = "JSESSIONID=" + $(if ($cookie) { $cookie.Value } else { "" })
+    curl.exe -sS --max-time 60 -X POST -H "Cookie: $cookieHeader" -F "file=@$imgPath" `
+        "$BaseUrl/ocr/drug" -o $outFile | Out-Null
     $r = [System.IO.File]::ReadAllText($outFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
     Assert ($r.code -eq 0) "ocr code=0"
     Assert ($r.data.lineCount -ge 2) "ocr recognized lines = $($r.data.lineCount)"

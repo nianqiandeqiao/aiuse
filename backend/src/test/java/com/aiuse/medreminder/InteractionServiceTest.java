@@ -7,8 +7,12 @@ import com.aiuse.medreminder.entity.MedicationPlan;
 import com.aiuse.medreminder.service.ElderService;
 import com.aiuse.medreminder.service.InteractionService;
 import com.aiuse.medreminder.service.MedicationPlanService;
+import com.aiuse.medreminder.security.CurrentUser;
+import com.aiuse.medreminder.security.CurrentUserHolder;
 import com.aiuse.medreminder.vo.InteractionCheckResult;
 import com.aiuse.medreminder.vo.InteractionConflict;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +31,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 @DisplayName("药物相互作用检查测试")
 class InteractionServiceTest {
+
+    private static final long TEST_USER_ID = 900003L;
+
+    @BeforeEach
+    void login() {
+        CurrentUserHolder.set(new CurrentUser(TEST_USER_ID, "tester", "测试用户"));
+    }
+
+    @AfterEach
+    void logout() {
+        CurrentUserHolder.clear();
+    }
 
     @Autowired
     private InteractionService interactionService;

@@ -19,9 +19,9 @@
         <result column="deleted" property="deleted"/>
     </resultMap>
 
-    <sql id="columns">
-        id, elder_id, drug_name, dosage, frequency, take_relation, remind_times,
-        start_date, end_date, status, created_at, updated_at, deleted
+    <sql id="planColumns">
+        p.id, p.elder_id, p.drug_name, p.dosage, p.frequency, p.take_relation, p.remind_times,
+        p.start_date, p.end_date, p.status, p.created_at, p.updated_at, p.deleted
     </sql>
 
     <insert id="insert" parameterType="com.aiuse.medreminder.entity.MedicationPlan"
@@ -33,47 +33,60 @@
     </insert>
 
     <select id="findById" resultMap="PlanMap">
-        SELECT <include refid="columns"/>
-        FROM medication_plan
-        WHERE id = #{id} AND deleted = 0
+        SELECT <include refid="planColumns"/>
+        FROM medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        WHERE p.id = #{id} AND p.deleted = 0 AND e.deleted = 0 AND e.owner_id = #{ownerId}
     </select>
 
     <select id="findByElderId" resultMap="PlanMap">
-        SELECT <include refid="columns"/>
-        FROM medication_plan
-        WHERE elder_id = #{elderId} AND deleted = 0
-        ORDER BY id DESC
+        SELECT <include refid="planColumns"/>
+        FROM medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        WHERE p.elder_id = #{elderId} AND p.deleted = 0 AND e.deleted = 0 AND e.owner_id = #{ownerId}
+        ORDER BY p.id DESC
     </select>
 
     <select id="findActiveByElderId" resultMap="PlanMap">
-        SELECT <include refid="columns"/>
-        FROM medication_plan
-        WHERE elder_id = #{elderId} AND deleted = 0 AND status = 1
-        ORDER BY id ASC
+        SELECT <include refid="planColumns"/>
+        FROM medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        WHERE p.elder_id = #{elderId} AND p.deleted = 0 AND p.status = 1
+        AND e.deleted = 0 AND e.owner_id = #{ownerId}
+        ORDER BY p.id ASC
     </select>
 
-    <update id="update" parameterType="com.aiuse.medreminder.entity.MedicationPlan">
-        UPDATE medication_plan
-        SET drug_name = #{drugName},
-            dosage = #{dosage},
-            frequency = #{frequency},
-            take_relation = #{takeRelation},
-            remind_times = #{remindTimes},
-            start_date = #{startDate},
-            end_date = #{endDate}
-        WHERE id = #{id} AND deleted = 0
+    <update id="update">
+        UPDATE medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        SET p.drug_name = #{plan.drugName},
+            p.dosage = #{plan.dosage},
+            p.frequency = #{plan.frequency},
+            p.take_relation = #{plan.takeRelation},
+            p.remind_times = #{plan.remindTimes},
+            p.start_date = #{plan.startDate},
+            p.end_date = #{plan.endDate}
+        WHERE p.id = #{plan.id} AND p.deleted = 0 AND e.owner_id = #{ownerId}
     </update>
 
     <update id="updateStatus">
-        UPDATE medication_plan SET status = #{status} WHERE id = #{id} AND deleted = 0
+        UPDATE medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        SET p.status = #{status}
+        WHERE p.id = #{id} AND p.deleted = 0 AND e.owner_id = #{ownerId}
     </update>
 
     <update id="softDelete">
-        UPDATE medication_plan SET deleted = 1 WHERE id = #{id} AND deleted = 0
+        UPDATE medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        SET p.deleted = 1
+        WHERE p.id = #{id} AND p.deleted = 0 AND e.owner_id = #{ownerId}
     </update>
 
     <update id="softDeleteByElderId">
-        UPDATE medication_plan SET deleted = 1 WHERE elder_id = #{elderId} AND deleted = 0
+        UPDATE medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        SET p.deleted = 1
+        WHERE p.elder_id = #{elderId} AND p.deleted = 0 AND e.owner_id = #{ownerId}
     </update>
 </mapper>
-

@@ -10,8 +10,12 @@ import com.aiuse.medreminder.entity.MedicationPlan;
 import com.aiuse.medreminder.service.CheckinService;
 import com.aiuse.medreminder.service.ElderService;
 import com.aiuse.medreminder.service.MedicationPlanService;
+import com.aiuse.medreminder.security.CurrentUser;
+import com.aiuse.medreminder.security.CurrentUserHolder;
 import com.aiuse.medreminder.vo.CheckinStats;
 import com.aiuse.medreminder.vo.TodayDoseSummary;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +34,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 @DisplayName("打卡业务测试")
 class CheckinServiceTest {
+
+    /** 测试用登录用户（多用户隔离后，业务层要求有登录上下文）。 */
+    private static final long TEST_USER_ID = 900002L;
+
+    @BeforeEach
+    void login() {
+        CurrentUserHolder.set(new CurrentUser(TEST_USER_ID, "tester", "测试用户"));
+    }
+
+    @AfterEach
+    void logout() {
+        CurrentUserHolder.clear();
+    }
 
     @Autowired
     private ElderService elderService;
@@ -140,4 +157,3 @@ class CheckinServiceTest {
                 .hasMessageContaining("不属于老人");
     }
 }
-
