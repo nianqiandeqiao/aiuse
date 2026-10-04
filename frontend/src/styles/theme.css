@@ -1,0 +1,229 @@
+/* ============================================================
+   适老化主题：高对比大字
+   颜色与字号全部集中在变量里，郑玲钰出配色稿后只改这一段即可换肤
+   ============================================================ */
+:root {
+  --app-font-size: 18px;
+  --app-font-size-lg: 20px;
+  --app-title-size: 28px;
+  --app-radius: 12px;
+
+  --app-primary: #1f4e79;
+  --app-primary-light: #e8f0f8;
+  --app-accent: #ffc000;
+  --app-text: #1a1a1a;
+  --app-bg: #f5f7fa;
+
+  --app-danger: #d32f2f;
+  --app-warning: #e67e22;
+  --app-notice: #7f8c8d;
+
+  /* 覆盖 Element Plus 变量 */
+  --el-color-primary: #1f4e79;
+  --el-color-danger: #d32f2f;
+  --el-color-warning: #e67e22;
+  --el-font-size-base: 18px;
+  --el-font-size-small: 16px;
+  --el-font-size-large: 20px;
+  --el-border-radius-base: 10px;
+  --el-text-color-primary: #1a1a1a;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--app-font-size);
+  line-height: 1.8;
+  color: var(--app-text);
+  background: var(--app-bg);
+}
+
+/* ---------------- 组件放大 ---------------- */
+.el-button {
+  min-height: 56px;
+  font-size: var(--app-font-size);
+  padding: 0 24px;
+}
+
+.el-button--large {
+  min-height: 64px;
+  font-size: var(--app-font-size-lg);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-date-editor {
+  min-height: 52px;
+  font-size: var(--app-font-size);
+}
+
+.el-form-item__label {
+  font-size: var(--app-font-size);
+  font-weight: 600;
+}
+
+.el-dialog__title {
+  font-size: var(--app-title-size);
+  font-weight: 700;
+}
+
+.el-table {
+  font-size: var(--app-font-size);
+}
+
+.el-table th.el-table__cell {
+  font-size: var(--app-font-size);
+  font-weight: 700;
+}
+
+.el-message-box__title {
+  font-size: var(--app-font-size-lg);
+}
+
+.el-message-box__message {
+  font-size: var(--app-font-size);
+}
+
+/* ---------------- 通用布局 ---------------- */
+.page {
+  padding: 20px 24px 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: var(--app-title-size);
+  font-weight: 700;
+  color: var(--app-primary);
+  margin: 8px 0 20px;
+}
+
+.card-block {
+  background: #fff;
+  border-radius: var(--app-radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.card-block h3 {
+  margin: 0 0 16px;
+  font-size: var(--app-font-size-lg);
+  color: var(--app-primary);
+}
+
+.muted {
+  color: #5a6672;
+}
+
+/* ---------------- 严重程度配色（用药安全页用） ---------------- */
+.severity-card {
+  border-left: 10px solid var(--app-notice);
+  border-radius: var(--app-radius);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.severity-1 {
+  border-left-color: var(--app-danger);
+  background: #fdecea;
+}
+
+.severity-2 {
+  border-left-color: var(--app-warning);
+  background: #fef5e7;
+}
+
+.severity-3 {
+  border-left-color: var(--app-notice);
+  background: #f4f6f7;
+}
+
+.severity-tag {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.severity-tag-1 {
+  background: var(--app-danger);
+}
+
+.severity-tag-2 {
+  background: var(--app-warning);
+}
+
+.severity-tag-3 {
+  background: var(--app-notice);
+}
+
+/* ---------------- 今日服药清单 ---------------- */
+.dose-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 2px solid #e4e8ee;
+  border-radius: var(--app-radius);
+  margin-bottom: 14px;
+  background: #fff;
+}
+
+.dose-item.is-taken {
+  border-color: #67c23a;
+  background: #f0f9eb;
+}
+
+.dose-time {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--app-primary);
+  min-width: 110px;
+}
+
+.dose-main {
+  flex: 1;
+}
+
+.dose-drug {
+  font-size: var(--app-font-size-lg);
+  font-weight: 700;
+}
+
+/* ---------------- 老人卡片 ---------------- */
+.elder-card {
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.elder-card:hover {
+  border-color: var(--app-accent);
+}
+
+.elder-card.is-active {
+  border-color: var(--app-primary);
+  background: var(--app-primary-light);
+}
+
+.entry-button {
+  width: 100%;
+  height: 96px;
+  font-size: var(--app-font-size-lg);
+  font-weight: 700;
+  border-radius: var(--app-radius);
+}
+

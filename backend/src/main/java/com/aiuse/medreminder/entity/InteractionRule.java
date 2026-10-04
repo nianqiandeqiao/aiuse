@@ -30,5 +30,19 @@ public class InteractionRule {
         return (first.equals(drugA) && second.equals(drugB))
                 || (first.equals(drugB) && second.equals(drugA));
     }
-}
 
+    /**
+     * 中文严重程度，供前端直接展示。不落库，只参与 JSON 序列化，
+     * 这样前端不用自己把 1/2/3 映射成文案。
+     */
+    public String getSeverityLabel() {
+        if (severity == null) {
+            return null;
+        }
+        return switch (severity) {
+            case 1 -> "严重";
+            case 2 -> "警告";
+            default -> "注意";
+        };
+    }
+}

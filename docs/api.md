@@ -265,7 +265,7 @@
 
 ### 6.4 规则库 `GET /api/interactions/rules`
 
-返回全部规则（含已停用的），字段：`drugA`、`drugB`、`severity`、`title`、`description`、`advice`、`source`、`enabled`。当前内置 **11 条真实规则**，覆盖华法林、阿司匹林、氯吡格雷、他汀类、降糖药、降压药、地高辛等常见组合。
+返回全部规则（含已停用的），字段：`drugA`、`drugB`、`severity`、**`severityLabel`（严重/警告/注意，前端可直接显示）**、`title`、`description`、`advice`、`source`、`enabled`。当前内置 **11 条真实规则**，覆盖华法林、阿司匹林、氯吡格雷、他汀类、降糖药、降压药、地高辛等常见组合。
 
 > 免责声明：规则库依据药品说明书整理，仅用于课程演示与用药提醒，不能替代医生或药师的处方审核。
 

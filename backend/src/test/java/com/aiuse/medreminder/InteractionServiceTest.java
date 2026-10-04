@@ -117,9 +117,9 @@ class InteractionServiceTest {
             assertThat(rule.getDrugA()).isNotBlank();
             assertThat(rule.getDrugB()).isNotBlank();
             assertThat(rule.getSeverity()).isBetween(1, 3);
+            assertThat(rule.getSeverityLabel()).isIn("严重", "警告", "注意");
             assertThat(rule.getAdvice()).isNotBlank();
             assertThat(rule.getSource()).isNotBlank();
         });
     }
 }
-

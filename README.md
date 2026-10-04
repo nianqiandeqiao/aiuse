@@ -23,8 +23,9 @@
 ## 技术栈
 
 - 后端：Java 17 + Spring Boot 4.0.0 + MyBatis 3.5.19 + Lombok + MySQL 9.6
+- 前端：Vue 3.5 + Vite 7 + Element Plus + vue-router + axios（六个页面已完成）
 - 外部能力：百度智能云「通用文字识别」（OCR 识药）
-- 前端（赵负责）：Vue 3 + Vite，默认 `http://localhost:5173`
+- 访问地址：演示（构建版）统一走 `http://localhost:8081/`；开发态前端 `http://localhost:5173/`
 - 后端端口：`8081`，接口前缀 `/api`
 
 ## 目录结构
@@ -48,6 +49,16 @@ aiuse/
 │   │       ├── schema.sql   # 三张核心表
 │   │       └── mapper/      # MyBatis SQL 映射文件（*.xml）
 │   └── src/test/java/com/aiuse/medreminder/   # JUnit 单元/接口测试
+├── frontend/                # 前端 Vue 3 + Vite 工程
+│   ├── src/
+│   │   ├── api/             # axios 封装（统一解包 + 错误提示）
+│   │   ├── router/          # hash 路由（构建版刷新不 404）
+│   │   ├── stores/          # 当前选中老人（localStorage 记忆）
+│   │   ├── styles/          # 适老化主题（颜色与字号集中在变量里）
+│   │   ├── utils/speech.js  # 浏览器语音播报
+│   │   └── views/           # 首页/档案/用药/打卡/识药/安全 六个页面
+│   ├── vite.config.js       # 开发代理 + 构建输出到后端 static
+│   └── package.json
 ├── docs/
 │   ├── api.md               # 接口清单（给赵、陈）
 │   ├── design.md            # 系统设计说明书（架构/数据库/流程/创新点）
@@ -57,8 +68,13 @@ aiuse/
 
 ## 快速开始
 
-> 小白版：直接双击项目根目录的 `启动后端.bat`（黑窗口别关，关掉就等于停服务），
-> 然后双击 `冒烟测试.bat` 看是否全绿。下面是用命令行的完整说明。
+> 小白版（只开一个服务，答辩推荐）：
+> 1. 双击 `启动系统.bat` —— 自动构建前端、启动后端，18 秒后自动打开浏览器；
+> 2. 黑窗口别关，关掉就等于停服务；
+> 3. 想验证功能全绿，再双击 `冒烟测试.bat`。
+>
+> 开发前端时用 `启动前端.bat`（改代码自动刷新）；只想调接口时用 `启动后端.bat`。
+> 下面是用命令行的完整说明。
 
 ### 1. 准备数据库
 
@@ -95,6 +111,31 @@ powershell -ExecutionPolicy Bypass -File scripts/run-backend.ps1
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
 ```
+
+### 5. 启动前端（开发态，可选）
+
+双击 `启动前端.bat`，或命令行执行：
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```
+
+浏览器打开 <http://localhost:5173/>。开发态由 Vite 把 `/api` 代理到后端 8081，前端不用处理跨域。
+
+> 注意：本机 PowerShell 的执行策略禁止运行 `npm.ps1`，所以命令要用 **`npm.cmd`** 而不是 `npm`；`启动前端.bat` 里已经处理好了。
+
+### 6. 构建前端（让后端 8081 直接托管）
+
+双击 `构建前端.bat`，或命令行执行：
+
+```powershell
+cd frontend
+npm.cmd run build
+```
+
+构建产物会输出到 `backend/src/main/resources/static/`（已被 .gitignore 忽略，不提交）。之后只要启动后端，打开 <http://localhost:8081/> 就是完整系统，答辩时只需开一个服务。
 
 ## 第 1 天（10 月 2 日）交付与验收
 
@@ -199,6 +240,41 @@ DELETE FROM medication_log; DELETE FROM medication_plan; DELETE FROM elder;
 
 > 前后端联调时如遇问题，优先看 `docs/api.md` 的请求/返回示例，以及 `docs/test-report.md` 的缺陷记录。
 
+## 前端（原分工是赵的部分，本次一并完成）
+
+工程位于 `frontend/`，Vue 3 + Vite 7 + Element Plus，共六个页面：
+
+| 页面 | 路由 | 对应文档要求 |
+| --- | --- | --- |
+| 首页 | `#/home` | 选择当前老人、四个功能入口大按钮 |
+| 老人档案 | `#/elders` | 添加老人 / 修改 / 搜索 / 删除（第二天任务） |
+| 用药计划 | `#/plans` | 加药、改药、停用恢复、删除（第二天任务） |
+| 今日打卡 | `#/checkin` | 今日清单、一键打卡、撤销、按时率、**语音播报**（第二天任务） |
+| 拍照识药 | `#/ocr` | 上传/拍照、显示识别结果、一键加入用药计划（第三天任务） |
+| 用药安全 | `#/safety` | 冲突检查、**严重项红色标红 + 弹窗**、规则库展示（第四天任务） |
+
+适老化设计（对应郑玲钰的视觉任务，先按高对比方案落地）：
+
+- 正文 18px、标题 28px、行距 1.8，按钮最小高度 56px，所有输入控件加高
+- 主色深蓝 `#1F4E79` + 强调明黄 `#FFC000`，白底黑字，警示红 `#D32F2F`，对比度高
+- 每个功能都配大按钮与语音播报，减少老人输入成本
+- 颜色与字号全部集中在 `frontend/src/styles/theme.css` 的 CSS 变量里，郑玲钰出稿后改这一处即可换肤
+
+技术要点：
+
+- `src/api/index.js` 统一封装 axios：自动解包后端 `{code,message,data}`，出错统一弹中文提示，页面不用重复写错误处理
+- 路由用 **hash 模式**，构建版由后端静态托管，刷新页面不会 404
+- 开发态 Vite 把 `/api` 代理到 `localhost:8081`，前端零跨域配置；构建态同源，`baseURL` 仍是 `/api`，一份代码两种模式
+- 依赖安装走 npmmirror 国内镜像（`frontend/.npmrc`），命令统一用 `npm.cmd`（本机 PowerShell 禁止运行 `npm.ps1`）
+
+验收结果（2026-10-04）：
+
+- `npm.cmd install` 成功（85 个包）
+- `npm.cmd run build` 成功且无警告，产物输出到后端 `static/`
+- `npm.cmd run dev` 启动正常（Vite 7.3.6），`http://localhost:5173/api/health` 代理连通后端
+- 后端启动后 `http://localhost:8081/` 直接返回前端页面，页面引用的 JS/CSS 资源全部 200
+- 后端回归：25 个 JUnit 用例 + 68 项冒烟断言全部通过
+
 ## 测试（src/test/java）
 
 项目现在有两层测试，分工不同：
@@ -228,9 +304,9 @@ powershell -ExecutionPolicy Bypass -File scripts/test-backend.ps1
 ## 每日站会（21:00）三句话模板
 
 ```
-今天做了啥：拍照识药接口（百度 OCR + 药品别名归一）和药物相互作用检查接口（11 条真实规则、三级严重程度、重复用药检测）全部完成，JUnit 25 个用例、端到端 68 项断言全绿，接口文档和系统设计说明书已更新发群。
-卡在哪：无（待跟进赵的前端页面进度，联调时对照 docs/api.md 即可）。
-明天做啥：前后端完整联调，按演示脚本走一遍「拍照识药 → 加药 → 冲突提醒 → 打卡 → 语音播报」全流程，修掉卡点。
+今天做了啥：前端六个页面全部完成（首页 / 老人档案 / 用药计划 / 今日打卡 / 拍照识药 / 用药安全），开发态 npm run dev 与构建版后端托管都跑通，25 个 JUnit 用例 + 68 项冒烟断言全绿。
+卡在哪：无。前后端已打通，演示只需双击「启动系统.bat」。
+明天做啥：按演示脚本完整走一遍「建老人 → 拍照识药 → 加药 → 冲突标红弹窗 → 打卡 → 语音播报」，录屏并归档材料。
 ```
 
 ## 已知风险

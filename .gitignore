@@ -16,7 +16,9 @@ target/
 node_modules/
 dist/
 
+# frontend build output (generated into backend static resources)
+backend/src/main/resources/static/
+
 # logs & temp
 *.log
 *.tmp
-
