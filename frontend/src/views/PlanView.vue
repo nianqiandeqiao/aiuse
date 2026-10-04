@@ -128,6 +128,7 @@ import {
   updatePlanStatus
 } from '../api'
 import { useCurrentElder } from '../stores/currentElder'
+import { todayStr } from '../utils/date'
 
 const { state, setElder } = useCurrentElder()
 
@@ -149,7 +150,7 @@ const emptyForm = () => ({
   frequency: '每日1次',
   takeRelation: '饭后',
   remindTimeList: ['08:00'],
-  startDate: new Date().toISOString().slice(0, 10),
+  startDate: todayStr(),
   endDate: null
 })
 
@@ -281,4 +282,3 @@ onMounted(async () => {
   font-weight: 600;
 }
 </style>
-

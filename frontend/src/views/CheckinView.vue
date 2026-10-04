@@ -86,10 +86,11 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { checkin, checkinStats, listElders, todayDoses, undoCheckin } from '../api'
 import { useCurrentElder } from '../stores/currentElder'
 import { speak } from '../utils/speech'
+import { shiftDateStr, todayStr } from '../utils/date'
 
 const { state, setElder } = useCurrentElder()
 
-const today = new Date().toISOString().slice(0, 10)
+const today = todayStr()
 const elders = ref([])
 const elderId = ref(state.elder ? state.elder.id : null)
 const date = ref(today)
@@ -121,17 +122,11 @@ async function loadAll() {
   loading.value = true
   try {
     summary.value = (await todayDoses(elderId.value, date.value)) || { total: 0, taken: 0, items: [] }
-    const from = shiftDate(date.value, -6)
+    const from = shiftDateStr(date.value, -6)
     stats.value = (await checkinStats(elderId.value, from, date.value)) || {}
   } finally {
     loading.value = false
   }
-}
-
-function shiftDate(dateStr, days) {
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
 }
 
 async function onElderChange() {
@@ -213,4 +208,3 @@ onMounted(async () => {
   color: var(--app-primary);
 }
 </style>
-

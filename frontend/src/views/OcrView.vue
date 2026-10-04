@@ -117,6 +117,7 @@ import { ElMessage } from 'element-plus'
 import { createPlan, listElders, ocrDrug } from '../api'
 import { useCurrentElder } from '../stores/currentElder'
 import { speak } from '../utils/speech'
+import { todayStr } from '../utils/date'
 
 const { state } = useCurrentElder()
 
@@ -178,7 +179,7 @@ async function addToPlans() {
         frequency: '每日1次',
         takeRelation: planForm.takeRelation,
         remindTimes: planForm.remindTime,
-        startDate: new Date().toISOString().slice(0, 10)
+        startDate: todayStr()
       })
     }
     ElMessage.success('已加入用药计划，可到「用药安全」页面检查冲突')
@@ -225,4 +226,3 @@ onMounted(async () => {
   margin: 0;
 }
 </style>
-
