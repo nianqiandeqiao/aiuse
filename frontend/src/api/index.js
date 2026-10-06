@@ -63,6 +63,19 @@ export const updatePlanStatus = (id, status) => http.put(`/plans/${id}/status`, 
 export const deletePlan = (id) => http.delete(`/plans/${id}`)
 export const todayDoses = (elderId, date) => http.get('/plans/today', { params: { elderId, date } })
 
+/* 库存与有效期提醒 + 历史用药（停药/删除后仍保留） */
+export const planAlerts = (elderId) => http.get('/plans/alerts', { params: { elderId } })
+export const planHistory = (elderId) => http.get('/plans/history', { params: { elderId } })
+
+/* 服药依从性报告（周报/月报） */
+export const adherenceReport = (elderId, period, date) =>
+  http.get('/reports/adherence', { params: { elderId, period, date } })
+
+/* 用药智能助手（语音问药、药盒说明书分析） */
+export const aiStatus = () => http.get('/ai/status')
+export const aiAsk = (data) => http.post('/ai/ask', data)
+export const aiAnalyzeMedicine = (data) => http.post('/ai/medicine-analysis', data)
+
 /* ---------------- 服药打卡 ---------------- */
 export const checkin = (data) => http.post('/checkins', data)
 export const listCheckins = (elderId, params = {}) => http.get('/checkins', { params: { elderId, ...params } })

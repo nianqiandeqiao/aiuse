@@ -20,10 +20,15 @@ public class MedicationPlan {
     private String remindTimes;
     private LocalDate startDate;
     private LocalDate endDate;
+    /** 药品有效期：临近过期时提醒。 */
+    private LocalDate expireDate;
+    /** 剩余量：快吃完时提醒补药。 */
+    private Integer stockQuantity;
+    /** 剩余量单位，如 片 / 粒 / ml。 */
+    private String stockUnit;
     /** 1 进行中，0 已停用。 */
     private Integer status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean deleted;
 }
-

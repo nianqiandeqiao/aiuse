@@ -46,6 +46,16 @@ body {
   background: var(--app-bg);
 }
 
+/* 无障碍字号切换：普通 / 超大（老人可以一键放大全站文字） */
+html[data-font="xlarge"] {
+  --app-font-size: 23px;
+  --app-font-size-lg: 26px;
+  --app-title-size: 34px;
+  --el-font-size-base: 23px;
+  --el-font-size-small: 20px;
+  --el-font-size-large: 26px;
+}
+
 /* ---------------- 组件放大 ---------------- */
 .el-button {
   min-height: 56px;

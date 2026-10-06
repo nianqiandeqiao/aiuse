@@ -10,6 +10,9 @@ const routes = [
   { path: '/checkin', name: 'checkin', component: () => import('../views/CheckinView.vue'), meta: { title: '今日打卡' } },
   { path: '/ocr', name: 'ocr', component: () => import('../views/OcrView.vue'), meta: { title: '拍照识药' } },
   { path: '/safety', name: 'safety', component: () => import('../views/SafetyView.vue'), meta: { title: '用药安全' } }
+  ,
+  { path: '/assistant', name: 'assistant', component: () => import('../views/AssistantView.vue'), meta: { title: '问药师' } },
+  { path: '/reports', name: 'reports', component: () => import('../views/ReportsView.vue'), meta: { title: '服药报告' } }
 ]
 
 export default createRouter({

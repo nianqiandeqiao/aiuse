@@ -31,4 +31,8 @@ public interface MedicationPlanMapper {
     int softDelete(@Param("id") long id, @Param("ownerId") long ownerId);
 
     int softDeleteByElderId(@Param("elderId") long elderId, @Param("ownerId") long ownerId);
+
+    /** 历史用药：已停用或已删除的计划（数据保留，方便以后查找）。 */
+    List<com.aiuse.medreminder.vo.MedicineHistoryItem> findHistoryByElderId(
+            @Param("elderId") long elderId, @Param("ownerId") long ownerId);
 }

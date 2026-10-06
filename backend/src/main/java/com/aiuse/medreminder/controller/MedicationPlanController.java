@@ -6,6 +6,8 @@ import com.aiuse.medreminder.dto.MedicationPlanUpdateRequest;
 import com.aiuse.medreminder.entity.MedicationPlan;
 import com.aiuse.medreminder.service.MedicationPlanService;
 import com.aiuse.medreminder.vo.TodayDoseSummary;
+import com.aiuse.medreminder.vo.MedicineHistoryItem;
+import com.aiuse.medreminder.vo.StockAlert;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -75,5 +77,16 @@ public class MedicationPlanController {
         planService.delete(id);
         return ApiResponse.ok();
     }
-}
 
+    /** 库存与有效期提醒：临期、过期、快用完。 */
+    @GetMapping("/alerts")
+    public ApiResponse<List<StockAlert>> alerts(@RequestParam long elderId) {
+        return ApiResponse.ok(planService.alerts(elderId));
+    }
+
+    /** 历史用药：停用或删除的计划仍然保留，可随时回查。 */
+    @GetMapping("/history")
+    public ApiResponse<List<MedicineHistoryItem>> history(@RequestParam long elderId) {
+        return ApiResponse.ok(planService.history(elderId));
+    }
+}

@@ -17,6 +17,19 @@
         <el-button type="success" size="large" :disabled="!elderId" @click="openCreate">
           ＋ 添加药品
         </el-button>
+        <el-button size="large" :disabled="!elderId" @click="openHistory">历史用药</el-button>
+      </div>
+
+      <div v-if="alerts.length" class="alert-area">
+        <el-alert
+          v-for="(alert, index) in alerts"
+          :key="index"
+          :type="alert.type === 'EXPIRED' || alert.type === 'OUT_OF_STOCK' ? 'error' : 'warning'"
+          :title="alert.title"
+          :description="alert.detail"
+          show-icon
+          :closable="false"
+        />
       </div>
 
       <el-alert
@@ -33,6 +46,18 @@
         <el-table-column prop="frequency" label="频次" width="130" />
         <el-table-column prop="takeRelation" label="服用时机" width="130" />
         <el-table-column prop="remindTimes" label="提醒时间" min-width="150" />
+        <el-table-column label="有效期" width="150">
+          <template #default="{ row }">
+            <span :class="{ 'text-danger': isExpired(row.expireDate) }">
+              {{ row.expireDate || '未填' }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="剩余量" width="120">
+          <template #default="{ row }">
+            {{ row.stockQuantity == null ? '未填' : row.stockQuantity + (row.stockUnit || '') }}
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'" effect="dark">
@@ -107,11 +132,49 @@
             placeholder="不填表示长期服用"
           />
         </el-form-item>
+        <el-form-item label="药品有效期">
+          <el-date-picker
+            v-model="form.expireDate"
+            type="date"
+            size="large"
+            value-format="YYYY-MM-DD"
+            placeholder="药盒上的有效期，到期前会提醒"
+          />
+        </el-form-item>
+        <el-form-item label="剩余量">
+          <el-input-number v-model="form.stockQuantity" :min="0" :max="9999" size="large" />
+          <el-input v-model="form.stockUnit" size="large" style="width: 100px; margin-left: 12px" placeholder="片" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button size="large" @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" size="large" :loading="saving" @click="submit">保存</el-button>
       </template>
+    </el-dialog>
+
+    <el-dialog v-model="historyVisible" title="历史用药（停药和删除的都保留在这里）" width="900px">
+      <el-table :data="history" style="width: 100%" empty-text="暂无历史用药">
+        <el-table-column prop="drugName" label="药品" min-width="140" />
+        <el-table-column prop="dosage" label="剂量" width="100" />
+        <el-table-column prop="takeRelation" label="服用时机" width="110" />
+        <el-table-column prop="remindTimes" label="提醒时间" width="130" />
+        <el-table-column label="有效期" width="130">
+          <template #default="{ row }">{{ row.expireDate || '未填' }}</template>
+        </el-table-column>
+        <el-table-column label="服药记录" width="130">
+          <template #default="{ row }">{{ row.takenLogs }} / {{ row.totalLogs }} 次</template>
+        </el-table-column>
+        <el-table-column label="状态" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.deleted ? 'info' : 'warning'">
+              {{ row.deleted ? '已删除' : '已停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="muted" style="margin-top: 12px">
+        说明：药品停用或删除后记录仍然保留，方便子女和医生回查历史用药。
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -124,6 +187,8 @@ import {
   deletePlan,
   listElders,
   listPlans,
+  planAlerts,
+  planHistory,
   updatePlan,
   updatePlanStatus
 } from '../api'
@@ -139,6 +204,10 @@ const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
 const formRef = ref()
+const alerts = ref([])
+const historyVisible = ref(false)
+const history = ref([])
+const today = todayStr()
 
 const frequencyOptions = ['每日1次', '每日2次', '每日3次', '隔日1次', '需要时服用']
 const timeOptions = ['06:00', '08:00', '12:00', '18:00', '20:00', '22:00']
@@ -151,7 +220,10 @@ const emptyForm = () => ({
   takeRelation: '饭后',
   remindTimeList: ['08:00'],
   startDate: todayStr(),
-  endDate: null
+  endDate: null,
+  expireDate: null,
+  stockQuantity: null,
+  stockUnit: '片'
 })
 
 const form = reactive(emptyForm())
@@ -185,9 +257,19 @@ async function loadPlans() {
   loading.value = true
   try {
     plans.value = (await listPlans(elderId.value)) || []
+    alerts.value = (await planAlerts(elderId.value)) || []
   } finally {
     loading.value = false
   }
+}
+
+function isExpired(dateStr) {
+  return !!dateStr && dateStr < today
+}
+
+async function openHistory() {
+  history.value = (await planHistory(elderId.value)) || []
+  historyVisible.value = true
 }
 
 async function onElderChange() {
@@ -209,7 +291,10 @@ function openEdit(row) {
     takeRelation: row.takeRelation || '饭后',
     remindTimeList: row.remindTimes ? row.remindTimes.split(',').map((t) => t.trim()) : ['08:00'],
     startDate: row.startDate || null,
-    endDate: row.endDate || null
+    endDate: row.endDate || null,
+    expireDate: row.expireDate || null,
+    stockQuantity: row.stockQuantity ?? null,
+    stockUnit: row.stockUnit || '片'
   })
   dialogVisible.value = true
 }
@@ -223,7 +308,10 @@ async function submit() {
     takeRelation: form.takeRelation,
     remindTimes: (form.remindTimeList || []).filter(Boolean).join(','),
     startDate: form.startDate,
-    endDate: form.endDate
+    endDate: form.endDate,
+    expireDate: form.expireDate,
+    stockQuantity: form.stockQuantity,
+    stockUnit: form.stockUnit
   }
   saving.value = true
   try {

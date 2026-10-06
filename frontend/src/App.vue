@@ -26,14 +26,20 @@
           @change="onMuteChange"
         />
         <el-button v-if="auth.loggedIn" size="large" @click="onLogout">退出</el-button>
+        <el-radio-group v-model="fontMode" size="large" @change="onFontChange">
+          <el-radio-button value="normal">标准字</el-radio-button>
+          <el-radio-button value="xlarge">超大</el-radio-button>
+        </el-radio-group>
       </div>
     </el-header>
 
     <el-menu :default-active="activeMenu" mode="horizontal" router class="app-menu">
       <el-menu-item index="/home">首页</el-menu-item>
+      <el-menu-item index="/assistant">问药师</el-menu-item>
+      <el-menu-item index="/checkin">今日打卡</el-menu-item>
+      <el-menu-item index="/reports">服药报告</el-menu-item>
       <el-menu-item index="/elders">老人档案</el-menu-item>
       <el-menu-item index="/plans">用药计划</el-menu-item>
-      <el-menu-item index="/checkin">今日打卡</el-menu-item>
       <el-menu-item index="/ocr">拍照识药</el-menu-item>
       <el-menu-item index="/safety">用药安全</el-menu-item>
     </el-menu>
@@ -41,6 +47,8 @@
     <el-main class="app-main">
       <router-view />
     </el-main>
+
+    <ReminderAgent v-if="auth.loggedIn" />
   </el-container>
 </template>
 
@@ -52,6 +60,7 @@ import { useCurrentElder } from './stores/currentElder'
 import { isMuted, setMuted, speak } from './utils/speech'
 import { ensureAuthChecked, markLoggedOut, useAuth } from './stores/auth'
 import { logoutUser } from './api'
+import ReminderAgent from './components/ReminderAgent.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -59,15 +68,26 @@ const { state } = useCurrentElder()
 const auth = useAuth()
 
 const muted = ref(isMuted())
+const fontMode = ref(localStorage.getItem('med-reminder:font') || 'normal')
 const activeMenu = computed(() => route.path)
 const isLoginPage = computed(() => route.path === '/login')
 
 onMounted(async () => {
+  applyFont(fontMode.value)
   const status = await ensureAuthChecked()
   if (!status.loggedIn && !isLoginPage.value) {
     router.replace('/login')
   }
 })
+
+function applyFont(mode) {
+  document.documentElement.dataset.font = mode === 'xlarge' ? 'xlarge' : 'normal'
+}
+
+function onFontChange(mode) {
+  localStorage.setItem('med-reminder:font', mode)
+  applyFont(mode)
+}
 
 async function onLogout() {
   try {

@@ -31,5 +31,22 @@ public record MedicationPlanCreateRequest(
         String remindTimes,
 
         LocalDate startDate,
-        LocalDate endDate) {
+        LocalDate endDate,
+
+        /** 药品有效期，用于临期提醒 */
+        LocalDate expireDate,
+
+        /** 剩余量，用于缺药提醒 */
+        Integer stockQuantity,
+
+        @Size(max = 10, message = "单位不能超过10个字符")
+        String stockUnit) {
+
+    /** 兼容旧调用的构造器：不带有效期与剩余量。 */
+    public MedicationPlanCreateRequest(Long elderId, String drugName, String dosage, String frequency,
+                                       String takeRelation, String remindTimes, LocalDate startDate,
+                                       LocalDate endDate) {
+        this(elderId, drugName, dosage, frequency, takeRelation, remindTimes, startDate, endDate,
+                null, null, null);
+    }
 }

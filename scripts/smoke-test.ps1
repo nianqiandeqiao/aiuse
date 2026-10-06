@@ -378,6 +378,81 @@ Step "24. interaction check by elder POST /interactions/check" {
     Invoke-Api -Method Delete -Path "/elders/$($e.data.id)" | Out-Null
 }
 
+# 25. stock and expiry alerts
+Step "25. stock/expiry alerts GET /plans/alerts" {
+    $e = Invoke-Api -Method Post -Path "/elders" -Body @{ name = (Zh @(0x5E93, 0x5B58, 0x6D4B, 0x8BD5)); age = 83 }
+    $soon = (Get-Date).AddDays(15).ToString("yyyy-MM-dd")
+    $plan = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId       = $e.data.id
+        drugName      = $drugName
+        dosage        = "1 tablet"
+        remindTimes   = "08:00"
+        startDate     = $today
+        expireDate    = $soon
+        stockQuantity = 2
+        stockUnit     = "tablet"
+    }
+    Assert ($plan.code -eq 0) "plan with expire/stock created"
+    $alerts = Invoke-Api -Method Get -Path "/plans/alerts?elderId=$($e.data.id)"
+    Assert ($alerts.code -eq 0) "alerts code=0"
+    $types = $alerts.data | ForEach-Object { $_.type }
+    Assert ($types -contains "EXPIRING") "expiring alert present"
+    Assert ($types -contains "LOW_STOCK") "low stock alert present"
+    Invoke-Api -Method Delete -Path "/plans/$($plan.data.id)" | Out-Null
+    Invoke-Api -Method Delete -Path "/elders/$($e.data.id)" | Out-Null
+}
+
+# 26. adherence report (week)
+Step "26. adherence report GET /reports/adherence" {
+    $e = Invoke-Api -Method Post -Path "/elders" -Body @{ name = (Zh @(0x62A5, 0x544A, 0x6D4B, 0x8BD5)); age = 84 }
+    $plan = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId     = $e.data.id
+        drugName    = $drugName
+        dosage      = "1 tablet"
+        remindTimes = "08:00,20:00"
+        startDate   = (Get-Date).AddDays(-3).ToString("yyyy-MM-dd")
+    }
+    Invoke-Api -Method Post -Path "/checkins" -Body @{
+        elderId = $e.data.id; planId = $plan.data.id; takeDate = $today; remindTime = "08:00"; status = "TAKEN"
+    } | Out-Null
+    $report = (Invoke-Api -Method Get -Path "/reports/adherence?elderId=$($e.data.id)&period=week").data
+    Assert ($report.daily.Count -eq 7) "weekly report has 7 days"
+    Assert ($report.expected -ge 2) "expected doses = $($report.expected)"
+    Assert ($report.taken -eq 1) "taken doses = $($report.taken)"
+    Assert ($report.missed -ge 1) "missed doses = $($report.missed)"
+    Assert ($null -ne $report.summary) "report summary present"
+    Invoke-Api -Method Delete -Path "/plans/$($plan.data.id)" | Out-Null
+    Invoke-Api -Method Delete -Path "/elders/$($e.data.id)" | Out-Null
+}
+
+# 27. AI assistant (rule fallback when no LLM key is configured)
+Step "27. AI assistant POST /ai/ask and /ai/medicine-analysis" {
+    $e = Invoke-Api -Method Post -Path "/elders" -Body @{ name = (Zh @(0x95EE, 0x836F, 0x6D4B, 0x8BD5)); age = 85 }
+    $p1 = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId = $e.data.id; drugName = $drugName; dosage = "1 tablet"; remindTimes = "08:00"
+    }
+    $p2 = Invoke-Api -Method Post -Path "/plans" -Body @{
+        elderId = $e.data.id; drugName = $drugName2; dosage = "1 tablet"; remindTimes = "20:00"
+    }
+    $ask = Invoke-Api -Method Post -Path "/ai/ask" -Body @{
+        elderId = $e.data.id; question = "what can I take together"; dialect = "henan"
+    }
+    Assert ($ask.code -eq 0) "ai ask code=0"
+    Assert (($ask.data.source -eq "RULE") -or ($ask.data.source -eq "LLM")) "answer source = $($ask.data.source)"
+    Assert ($ask.data.answer.Length -gt 5) "answer not empty"
+
+    $analysis = Invoke-Api -Method Post -Path "/ai/medicine-analysis" -Body @{
+        elderId = $e.data.id
+        text    = "aspirin 08:00 expire 2020-01-01"
+    }
+    Assert ($analysis.code -eq 0) "medicine analysis code=0"
+    Assert ($analysis.data.advices.Count -ge 1) "advices count = $($analysis.data.advices.Count)"
+
+    Invoke-Api -Method Delete -Path "/plans/$($p1.data.id)" | Out-Null
+    Invoke-Api -Method Delete -Path "/plans/$($p2.data.id)" | Out-Null
+    Invoke-Api -Method Delete -Path "/elders/$($e.data.id)" | Out-Null
+}
+
 Write-Host ""
 Write-Host "----------------------------------------"
 Write-Host ("PASS: {0}   FAIL: {1}" -f $script:passed, $script:failed)

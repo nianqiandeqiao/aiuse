@@ -35,6 +35,31 @@ public class DatabaseInitializer implements ApplicationRunner {
         log.info("schema.sql 执行完成，三张核心表已就绪");
 
         migrateOwnerColumn(dataSource);
+        migratePlanStockColumns(dataSource);
+    }
+
+    /**
+     * 轻量迁移：给用药计划补上有效期与剩余量字段（老人囤药、忘过期是真实痛点）。
+     */
+    private void migratePlanStockColumns(DataSource dataSource) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        addColumnIfMissing(jdbcTemplate, "medication_plan", "expire_date",
+                "ALTER TABLE medication_plan ADD COLUMN expire_date DATE NULL COMMENT '有效期' AFTER end_date");
+        addColumnIfMissing(jdbcTemplate, "medication_plan", "stock_quantity",
+                "ALTER TABLE medication_plan ADD COLUMN stock_quantity INT NULL COMMENT '剩余量' AFTER expire_date");
+        addColumnIfMissing(jdbcTemplate, "medication_plan", "stock_unit",
+                "ALTER TABLE medication_plan ADD COLUMN stock_unit VARCHAR(10) NULL COMMENT '剩余量单位' AFTER stock_quantity");
+    }
+
+    private void addColumnIfMissing(JdbcTemplate jdbcTemplate, String table, String column, String ddl) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+                Integer.class, table, column);
+        if (count == null || count == 0) {
+            jdbcTemplate.execute(ddl);
+            log.info("已为 {} 表新增 {} 列", table, column);
+        }
     }
 
     /**

@@ -13,6 +13,9 @@
         <result column="remind_times" property="remindTimes"/>
         <result column="start_date" property="startDate"/>
         <result column="end_date" property="endDate"/>
+        <result column="expire_date" property="expireDate"/>
+        <result column="stock_quantity" property="stockQuantity"/>
+        <result column="stock_unit" property="stockUnit"/>
         <result column="status" property="status"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
@@ -21,15 +24,18 @@
 
     <sql id="planColumns">
         p.id, p.elder_id, p.drug_name, p.dosage, p.frequency, p.take_relation, p.remind_times,
-        p.start_date, p.end_date, p.status, p.created_at, p.updated_at, p.deleted
+        p.start_date, p.end_date, p.expire_date, p.stock_quantity, p.stock_unit,
+        p.status, p.created_at, p.updated_at, p.deleted
     </sql>
 
     <insert id="insert" parameterType="com.aiuse.medreminder.entity.MedicationPlan"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO medication_plan (elder_id, drug_name, dosage, frequency, take_relation,
-                                     remind_times, start_date, end_date)
+                                     remind_times, start_date, end_date, expire_date,
+                                     stock_quantity, stock_unit)
         VALUES (#{elderId}, #{drugName}, #{dosage}, #{frequency}, #{takeRelation},
-                #{remindTimes}, #{startDate}, #{endDate})
+                #{remindTimes}, #{startDate}, #{endDate}, #{expireDate},
+                #{stockQuantity}, #{stockUnit})
     </insert>
 
     <select id="findById" resultMap="PlanMap">
@@ -65,7 +71,10 @@
             p.take_relation = #{plan.takeRelation},
             p.remind_times = #{plan.remindTimes},
             p.start_date = #{plan.startDate},
-            p.end_date = #{plan.endDate}
+            p.end_date = #{plan.endDate},
+            p.expire_date = #{plan.expireDate},
+            p.stock_quantity = #{plan.stockQuantity},
+            p.stock_unit = #{plan.stockUnit}
         WHERE p.id = #{plan.id} AND p.deleted = 0 AND e.owner_id = #{ownerId}
     </update>
 
@@ -89,4 +98,28 @@
         SET p.deleted = 1
         WHERE p.elder_id = #{elderId} AND p.deleted = 0 AND e.owner_id = #{ownerId}
     </update>
+
+    <select id="findHistoryByElderId" resultType="com.aiuse.medreminder.vo.MedicineHistoryItem">
+        SELECT p.id AS planId,
+               p.drug_name AS drugName,
+               p.dosage AS dosage,
+               p.frequency AS frequency,
+               p.take_relation AS takeRelation,
+               p.remind_times AS remindTimes,
+               p.start_date AS startDate,
+               p.end_date AS endDate,
+               p.expire_date AS expireDate,
+               p.stock_quantity AS stockQuantity,
+               p.stock_unit AS stockUnit,
+               p.status AS status,
+               p.deleted AS deleted,
+               (SELECT COUNT(*) FROM medication_log l WHERE l.plan_id = p.id) AS totalLogs,
+               (SELECT COUNT(*) FROM medication_log l
+                 WHERE l.plan_id = p.id AND l.status = 'TAKEN') AS takenLogs
+        FROM medication_plan p
+        JOIN elder e ON e.id = p.elder_id
+        WHERE p.elder_id = #{elderId} AND e.deleted = 0 AND e.owner_id = #{ownerId}
+          AND (p.deleted = 1 OR p.status = 0)
+        ORDER BY p.id DESC
+    </select>
 </mapper>

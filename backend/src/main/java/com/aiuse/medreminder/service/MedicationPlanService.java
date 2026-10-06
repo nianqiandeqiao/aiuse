@@ -12,9 +12,12 @@ import com.aiuse.medreminder.mapper.MedicationPlanMapper;
 import com.aiuse.medreminder.security.CurrentUserHolder;
 import com.aiuse.medreminder.vo.TodayDoseItem;
 import com.aiuse.medreminder.vo.TodayDoseSummary;
+import com.aiuse.medreminder.vo.MedicineHistoryItem;
+import com.aiuse.medreminder.vo.StockAlert;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -30,6 +33,12 @@ public class MedicationPlanService {
 
     /** 计划没有填写提醒时间时使用的默认时间。 */
     public static final String DEFAULT_REMIND_TIME = "08:00";
+
+    /** 有效期剩余天数小于等于该值时提醒"临期"。 */
+    private static final int EXPIRING_DAYS = 30;
+
+    /** 剩余量小于等于该值时提醒"快用完"。 */
+    private static final int LOW_STOCK_THRESHOLD = 5;
 
     private final MedicationPlanMapper planMapper;
     private final ElderMapper elderMapper;
@@ -54,6 +63,9 @@ public class MedicationPlanService {
         plan.setRemindTimes(request.remindTimes());
         plan.setStartDate(request.startDate());
         plan.setEndDate(request.endDate());
+        plan.setExpireDate(request.expireDate());
+        plan.setStockQuantity(request.stockQuantity());
+        plan.setStockUnit(request.stockUnit());
         planMapper.insert(plan);
         return get(plan.getId());
     }
@@ -81,6 +93,9 @@ public class MedicationPlanService {
         plan.setRemindTimes(request.remindTimes());
         plan.setStartDate(request.startDate());
         plan.setEndDate(request.endDate());
+        plan.setExpireDate(request.expireDate());
+        plan.setStockQuantity(request.stockQuantity());
+        plan.setStockUnit(request.stockUnit());
         if (planMapper.update(plan, ownerId) == 0) {
             throw BizException.notFound("用药计划不存在: id=" + id);
         }
@@ -103,6 +118,57 @@ public class MedicationPlanService {
         if (planMapper.softDelete(id, ownerId) == 0) {
             throw BizException.notFound("用药计划不存在或已删除: id=" + id);
         }
+    }
+
+    /**
+     * 药品库存与有效期提醒（对应真实痛点：老人爱囤药、忘记过期）。
+     * 只提醒"进行中"的计划。
+     */
+    public List<StockAlert> alerts(long elderId) {
+        long ownerId = CurrentUserHolder.requireUserId();
+        requireOwnedElder(elderId, ownerId);
+        LocalDate today = LocalDate.now();
+        List<StockAlert> alerts = new ArrayList<>();
+        for (MedicationPlan plan : planMapper.findByElderId(elderId, ownerId)) {
+            if (plan.getStatus() == null || plan.getStatus() != 1) {
+                continue;
+            }
+            if (plan.getExpireDate() != null) {
+                long days = ChronoUnit.DAYS.between(today, plan.getExpireDate());
+                if (days < 0) {
+                    alerts.add(new StockAlert(StockAlert.TYPE_EXPIRED, plan.getId(), plan.getDrugName(),
+                            "药品已过期，请勿服用",
+                            plan.getDrugName() + " 已于 " + plan.getExpireDate() + " 过期，请停止服用并妥善处理。",
+                            (int) days));
+                } else if (days <= EXPIRING_DAYS) {
+                    alerts.add(new StockAlert(StockAlert.TYPE_EXPIRING, plan.getId(), plan.getDrugName(),
+                            "药品还有 " + days + " 天过期",
+                            plan.getDrugName() + " 将于 " + plan.getExpireDate() + " 到期，建议尽快服用或更换新药。",
+                            (int) days));
+                }
+            }
+            if (plan.getStockQuantity() != null) {
+                String unit = plan.getStockUnit() == null ? "" : plan.getStockUnit();
+                if (plan.getStockQuantity() <= 0) {
+                    alerts.add(new StockAlert(StockAlert.TYPE_OUT_OF_STOCK, plan.getId(), plan.getDrugName(),
+                            "药品已用完", plan.getDrugName() + " 剩余量为 0，请及时补药，避免断药。",
+                            plan.getStockQuantity()));
+                } else if (plan.getStockQuantity() <= LOW_STOCK_THRESHOLD) {
+                    alerts.add(new StockAlert(StockAlert.TYPE_LOW_STOCK, plan.getId(), plan.getDrugName(),
+                            "药品快用完了",
+                            plan.getDrugName() + " 只剩 " + plan.getStockQuantity() + unit + "，建议尽快补药。",
+                            plan.getStockQuantity()));
+                }
+            }
+        }
+        return alerts;
+    }
+
+    /** 历史用药：停用/删除的计划仍然保留，子女和医生可以回查。 */
+    public List<MedicineHistoryItem> history(long elderId) {
+        long ownerId = CurrentUserHolder.requireUserId();
+        requireOwnedElder(elderId, ownerId);
+        return planMapper.findHistoryByElderId(elderId, ownerId);
     }
 
     /**
