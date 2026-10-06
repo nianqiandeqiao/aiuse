@@ -37,7 +37,7 @@
           size="large"
           @click="startVoice"
         >
-          {{ listening ? '正在听…请说话' : '🎤 点一下开始说话' }}
+          {{ recording ? '正在录音…点一下结束' : '🎤 点一下开始说话' }}
         </el-button>
         <el-input
           v-model="question"
@@ -119,6 +119,8 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { aiAnalyzeMedicine, aiAsk, aiStatus, listElders, ocrDrug } from '../api'
+import { asrRecognize } from '../api'
+import { startRecording, stopRecording } from '../utils/asr'
 import { useCurrentElder } from '../stores/currentElder'
 import { speak } from '../utils/speech'
 
@@ -131,6 +133,7 @@ const aiMode = ref('RULE')
 const question = ref('')
 const asking = ref(false)
 const listening = ref(false)
+const recording = ref(false)
 const answer = ref(null)
 /** 当前是不是 https / localhost（只有安全上下文才能用麦克风） */
 const secureContext = ref(true)
@@ -171,33 +174,38 @@ async function ask() {
   }
 }
 
-function startVoice() {
-  if (!speechSupported.value) {
-    ElMessage.warning('当前浏览器不支持语音识别，请用电脑版 Chrome 或 Edge 打开，或者直接打字提问')
-    return
-  }
+/**
+ * 语音提问：浏览器录音 -> 后端调用百度语音识别 -> 自动提问。
+ * （不用浏览器自带识别，因为它依赖谷歌服务，国内用不了）
+ */
+async function startVoice() {
   if (!window.isSecureContext) {
-    ElMessage.warning('http 地址不能用麦克风，请改用 http://localhost:8081 或 https 网址，也可以直接打字')
+    ElMessage.warning('麦克风需要 https 或 localhost，请用 http://localhost:8081 打开，或直接打字')
     return
   }
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  const recognition = new SpeechRecognition()
-  recognition.lang = 'zh-CN'
-  recognition.interimResults = false
-  recognition.maxAlternatives = 1
-  recognition.onresult = (event) => {
-    question.value = event.results[0][0].transcript
-    ask()
-  }
-  recognition.onerror = (event) => {
+  if (recording.value) {
+    recording.value = false
     listening.value = false
-    ElMessage.warning(speechErrorMessage(event.error))
+    const audio = await stopRecording()
+    if (!audio) {
+      ElMessage.warning('没有录到声音，请靠近麦克风再说一次')
+      return
+    }
+    try {
+      const result = await asrRecognize(audio)
+      question.value = result.text
+      await ask()
+    } catch (e) {
+      // 具体原因由请求拦截器提示（例如"请先开通百度语音识别"）
+    }
+    return
   }
-  recognition.onend = () => {
-    listening.value = false
+  const started = await startRecording((message) => ElMessage.warning(message))
+  if (started) {
+    recording.value = true
+    listening.value = true
+    ElMessage.info('正在录音，说完话请再点一次按钮结束')
   }
-  recognition.start()
-  listening.value = true
 }
 
 function onFileChange(uploadFile) {

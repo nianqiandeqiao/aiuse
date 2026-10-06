@@ -42,7 +42,8 @@
 <script setup>
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { checkin, todayDoses } from '../api'
+import { asrRecognize, checkin, todayDoses } from '../api'
+import { startRecording, stopRecording } from '../utils/asr'
 import { useCurrentElder } from '../stores/currentElder'
 import { speak } from '../utils/speech'
 
@@ -128,50 +129,52 @@ function snooze() {
   visible.value = false
 }
 
-function startVoice() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  if (!SpeechRecognition) {
-    hint.value = '当前浏览器不支持语音识别，请直接点「已经吃了」'
+let recordTimer = null
+
+/** 录音 5 秒后自动上传识别（浏览器自带识别依赖谷歌服务，国内用不了） */
+async function startVoice() {
+  if (listening.value) {
     return
   }
-  if (!window.isSecureContext) {
-    hint.value = 'http 地址不能用麦克风，请改用 http://localhost:8081 或 https 网址；也可以直接点「已经吃了」'
+  const started = await startRecording((message) => {
+    hint.value = message
+  })
+  if (!started) {
     return
   }
-  const recognition = new SpeechRecognition()
-  recognition.lang = 'zh-CN'
-  recognition.interimResults = false
-  recognition.onresult = (event) => {
-    const text = event.results[0][0].transcript
+  listening.value = true
+  hint.value = '请说：吃了 / 等一会儿（说完会自动识别）'
+  recordTimer = setTimeout(finishVoice, 5000)
+}
+
+async function finishVoice() {
+  if (recordTimer) {
+    clearTimeout(recordTimer)
+    recordTimer = null
+  }
+  listening.value = false
+  const audio = await stopRecording()
+  if (!audio) {
+    hint.value = '没有录到声音，请再试一次'
+    return
+  }
+  try {
+    const result = await asrRecognize(audio)
+    const text = result.text
     hint.value = `听到：${text}`
     if (/吃|服|好|中|行|完/.test(text)) {
       confirmTaken()
     } else if (/等|一会|待会|待会儿|稍后/.test(text)) {
       snooze()
     } else if (/没|不/.test(text)) {
-      hint.value = '好的，我先记着，请您尽快服药，有不适告诉家里人'
+      hint.value = '好的，请您尽快服药，有不舒服告诉家里人'
       speak('好的，请您尽快服药，有不舒服告诉家里人')
     } else {
       hint.value = '没听清，您可以说「吃了」或者「等一会儿」'
     }
+  } catch (e) {
+    // 具体原因由请求拦截器提示
   }
-  recognition.onerror = (event) => {
-    listening.value = false
-    const messages = {
-      'not-allowed': '浏览器没有麦克风权限，请在地址栏允许麦克风',
-      'service-not-allowed': '当前环境禁止语音服务，请改用 https 或 localhost',
-      'audio-capture': '没有检测到麦克风',
-      network: '语音识别需要联网，请检查网络',
-      'no-speech': '没听清，请再说一次，或者直接点「已经吃了」'
-    }
-    hint.value = messages[event.error] || ('语音识别失败：' + event.error)
-  }
-  recognition.onend = () => {
-    listening.value = false
-  }
-  recognition.start()
-  listening.value = true
-  hint.value = '请说：吃了 / 等一会儿'
 }
 
 onMounted(() => {

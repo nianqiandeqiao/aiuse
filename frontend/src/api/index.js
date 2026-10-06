@@ -76,6 +76,9 @@ export const aiStatus = () => http.get('/ai/status')
 export const aiAsk = (data) => http.post('/ai/ask', data)
 export const aiAnalyzeMedicine = (data) => http.post('/ai/medicine-analysis', data)
 
+/* 语音识别（浏览器录音 -> 后端调百度 ASR） */
+export const asrRecognize = (audioBase64) => http.post('/asr/recognize', { audioBase64 })
+
 /* ---------------- 服药打卡 ---------------- */
 export const checkin = (data) => http.post('/checkins', data)
 export const listCheckins = (elderId, params = {}) => http.get('/checkins', { params: { elderId, ...params } })

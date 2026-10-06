@@ -41,6 +41,11 @@ public class BaiduOcrService {
         return StringUtils.hasText(properties.getApiKey()) && StringUtils.hasText(properties.getSecretKey());
     }
 
+    /** 供语音识别等其他百度服务复用同一个 access_token（避免重复申请）。 */
+    public String accessTokenForOtherService() {
+        return accessToken();
+    }
+
     /** 识别图片中的全部文字，按行返回。 */
     public List<String> recognizeLines(byte[] imageBytes) {
         if (!isConfigured()) {
