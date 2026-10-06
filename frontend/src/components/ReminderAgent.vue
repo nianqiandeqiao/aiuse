@@ -31,6 +31,10 @@
       </div>
 
       <div class="reminder-hint">{{ hint }}</div>
+      <div v-if="!secureContext" class="reminder-warn">
+        当前用 http 打开，浏览器不允许用麦克风；请改用 http://localhost:8081 或 https 网址，
+        也可以直接点「已经吃了」。
+      </div>
     </div>
   </el-dialog>
 </template>
@@ -49,6 +53,7 @@ const current = ref({})
 const saving = ref(false)
 const listening = ref(false)
 const hint = ref('到点提醒：可以直接说「吃了」或者「等一会儿」')
+const secureContext = ref(true)
 
 /** 被推迟的提醒：key -> 到什么时候再提醒 */
 const snoozed = reactive({})
@@ -129,6 +134,10 @@ function startVoice() {
     hint.value = '当前浏览器不支持语音识别，请直接点「已经吃了」'
     return
   }
+  if (!window.isSecureContext) {
+    hint.value = 'http 地址不能用麦克风，请改用 http://localhost:8081 或 https 网址；也可以直接点「已经吃了」'
+    return
+  }
   const recognition = new SpeechRecognition()
   recognition.lang = 'zh-CN'
   recognition.interimResults = false
@@ -146,9 +155,16 @@ function startVoice() {
       hint.value = '没听清，您可以说「吃了」或者「等一会儿」'
     }
   }
-  recognition.onerror = () => {
+  recognition.onerror = (event) => {
     listening.value = false
-    hint.value = '没听清，请再说一次，或者直接点「已经吃了」'
+    const messages = {
+      'not-allowed': '浏览器没有麦克风权限，请在地址栏允许麦克风',
+      'service-not-allowed': '当前环境禁止语音服务，请改用 https 或 localhost',
+      'audio-capture': '没有检测到麦克风',
+      network: '语音识别需要联网，请检查网络',
+      'no-speech': '没听清，请再说一次，或者直接点「已经吃了」'
+    }
+    hint.value = messages[event.error] || ('语音识别失败：' + event.error)
   }
   recognition.onend = () => {
     listening.value = false
@@ -159,6 +175,7 @@ function startVoice() {
 }
 
 onMounted(() => {
+  secureContext.value = window.isSecureContext
   timer = setInterval(poll, POLL_MS)
   poll()
 })
@@ -217,5 +234,14 @@ onUnmounted(() => {
   color: #5a6672;
   min-height: 28px;
 }
-</style>
 
+.reminder-warn {
+  margin-top: 10px;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #b26a00;
+  background: #fff7e6;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+</style>

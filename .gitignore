@@ -25,3 +25,6 @@ backend/src/main/resources/static/
 
 # local tools (cloudflared for public sharing)
 tools/
+
+# self-signed certificate (not used in LAN mode; kept ignored in case of local experiments)
+backend/keystore.p12

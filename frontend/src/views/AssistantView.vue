@@ -20,6 +20,16 @@
         </el-tag>
       </div>
 
+      <el-alert
+        v-if="!secureContext"
+        class="secure-tip"
+        type="warning"
+        show-icon
+        :closable="false"
+        title="当前用 http 打开，浏览器不允许调用麦克风"
+        description="语音提问需要 https 或 localhost。请在电脑上改用 http://localhost:8081 打开，或使用 https 网址；也可以直接在下面打字提问。"
+      />
+
       <div class="ask-area">
         <el-button
           class="mic-button"
@@ -122,6 +132,9 @@ const question = ref('')
 const asking = ref(false)
 const listening = ref(false)
 const answer = ref(null)
+/** 当前是不是 https / localhost（只有安全上下文才能用麦克风） */
+const secureContext = ref(true)
+const speechSupported = ref(true)
 
 const file = ref(null)
 const previewUrl = ref('')
@@ -159,11 +172,15 @@ async function ask() {
 }
 
 function startVoice() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  if (!SpeechRecognition) {
-    ElMessage.warning('当前浏览器不支持语音识别，请用电脑版 Chrome 或 Edge 打开')
+  if (!speechSupported.value) {
+    ElMessage.warning('当前浏览器不支持语音识别，请用电脑版 Chrome 或 Edge 打开，或者直接打字提问')
     return
   }
+  if (!window.isSecureContext) {
+    ElMessage.warning('http 地址不能用麦克风，请改用 http://localhost:8081 或 https 网址，也可以直接打字')
+    return
+  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
   const recognition = new SpeechRecognition()
   recognition.lang = 'zh-CN'
   recognition.interimResults = false
@@ -172,9 +189,9 @@ function startVoice() {
     question.value = event.results[0][0].transcript
     ask()
   }
-  recognition.onerror = () => {
+  recognition.onerror = (event) => {
     listening.value = false
-    ElMessage.warning('没听清，请再说一遍')
+    ElMessage.warning(speechErrorMessage(event.error))
   }
   recognition.onend = () => {
     listening.value = false
@@ -224,6 +241,8 @@ function speakAnalysis() {
 }
 
 onMounted(async () => {
+  secureContext.value = window.isSecureContext
+  speechSupported.value = !!(window.SpeechRecognition || window.webkitSpeechRecognition)
   elders.value = (await listElders()) || []
   if (!elderId.value && elders.value.length > 0) {
     elderId.value = elders.value[0].id
@@ -231,6 +250,19 @@ onMounted(async () => {
   const status = await aiStatus()
   aiMode.value = status.mode
 })
+
+/** 把浏览器的语音识别错误翻译成老人听得懂的提示 */
+function speechErrorMessage(error) {
+  const messages = {
+    'not-allowed': '浏览器没有麦克风权限，请在地址栏允许麦克风后重试',
+    'service-not-allowed': '当前环境禁止使用语音服务，请改用 https 或 localhost 打开',
+    'audio-capture': '没有检测到麦克风，请检查设备是否插好',
+    network: '语音识别需要联网，请检查网络后重试',
+    'no-speech': '没听清，请再说一遍',
+    aborted: '已取消这次语音输入'
+  }
+  return messages[error] || ('语音识别失败：' + error)
+}
 </script>
 
 <style scoped>
