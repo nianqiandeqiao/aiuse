@@ -192,6 +192,9 @@ npm.cmd run build
 
 ### 7. 发布到公网给他人访问（可选）
 
+> **想部署成正式线上网址（带 https、不依赖你电脑开机）请看 → [docs/deploy-cloud.md](docs/deploy-cloud.md)**：
+> 里面写了用 Render（免费）+ TiDB Cloud（免费 MySQL）的完整步骤，仓库里已经准备好 Dockerfile 和 render.yaml，照着填几个环境变量就能上线。
+
 双击 `启动公网访问.bat`：脚本会自动启动后端并建立一个 Cloudflare 免费临时隧道，窗口里会给出形如 `https://xxxx-xxxx.trycloudflare.com` 的公网地址，发给别人就能访问。
 
 安全性说明：系统是**账号制**，每个人用自己的用户名密码注册登录，**只能看到和修改自己添加的老人、用药计划与打卡记录**，别人的数据连查都查不到（未登录访问数据接口一律返回 401，访问别人的数据返回 404）。

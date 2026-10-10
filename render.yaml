@@ -1,0 +1,26 @@
+# Render 一键部署蓝图（把仓库连到 Render 后会自动读取这个文件）
+services:
+  - type: web
+    name: med-reminder
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: cloud
+      - key: JAVA_TOOL_OPTIONS
+        value: -Xmx320m
+      # 下面这些在 Render 控制台里填真实值（sync: false 表示不在仓库里存值）
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: BAIDU_OCR_API_KEY
+        sync: false
+      - key: BAIDU_OCR_SECRET_KEY
+        sync: false
+      - key: LLM_ENABLED
+        value: "false"
+

@@ -1,0 +1,44 @@
+# 自建服务器/本地一体化启动：app + mysql，一条命令跑起来
+# 用法：docker compose up -d --build   然后打开 http://服务器IP:8081/
+services:
+  mysql:
+    image: mysql:9.6
+    container_name: med-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: medreminder
+      MYSQL_DATABASE: med_reminder
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pmedreminder"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: med-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: cloud
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/med_reminder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: medreminder
+      # 下面两项按需填写
+      BAIDU_OCR_API_KEY: ""
+      BAIDU_OCR_SECRET_KEY: ""
+      PORT: 8081
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+

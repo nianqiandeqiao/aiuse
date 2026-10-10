@@ -2,7 +2,8 @@ spring:
   application:
     name: med-reminder-backend
   profiles:
-    active: local
+    # 本地默认用 local 配置；云平台上设为 cloud 或留空，全部走环境变量
+    active: ${SPRING_PROFILES_ACTIVE:local}
   servlet:
     multipart:
       max-file-size: 5MB
@@ -17,7 +18,8 @@ spring:
       connection-timeout: 5000
 
 server:
-  port: 8081
+  # 云平台（Render / Railway / Zeabur 等）会注入 PORT，本地默认 8081
+  port: ${PORT:8081}
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml

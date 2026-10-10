@@ -1,0 +1,30 @@
+# 云平台配置：所有敏感信息都通过环境变量注入，仓库里不留任何密钥
+spring:
+  datasource:
+    # 例：jdbc:mysql://<主机>:<端口>/<库名>?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 10000
+
+baidu:
+  ocr:
+    api-key: ${BAIDU_OCR_API_KEY:}
+    secret-key: ${BAIDU_OCR_SECRET_KEY:}
+
+app:
+  auth:
+    allow-register: ${ALLOW_REGISTER:true}
+  llm:
+    enabled: ${LLM_ENABLED:false}
+    base-url: ${LLM_BASE_URL:https://qianfan.baidubce.com/v2}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:ernie-4.0-8k}
+
+logging:
+  level:
+    root: info
+    com.aiuse.medreminder: info
+

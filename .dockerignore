@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+.vscode
+node_modules
+**/node_modules
+backend/target
+frontend/dist
+backend/src/main/resources/static
+tools
+*.log
+*.md
+!README.md
+
