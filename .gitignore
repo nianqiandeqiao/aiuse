@@ -28,3 +28,6 @@ tools/
 
 # self-signed certificate (not used in LAN mode; kept ignored in case of local experiments)
 backend/keystore.p12
+
+# 服务器部署时生成的配置（含数据库密码与百度密钥）
+.env

@@ -2,6 +2,56 @@
 
 国庆 6 天冲刺项目（10 月 2 日 — 10 月 7 日），目标：做出一版能现场演示的雏形。
 
+## 队友上手（刚克隆下来？先看这里）
+
+代码里**不含任何密钥**（数据库密码、百度密钥都在被忽略的本地配置文件里），所以拉下来后需要自己补一份配置才能跑。两种方式，挑一种：
+
+### 方式一：装了 Docker（最省事，推荐）
+
+在项目根目录执行一条命令，会自动装好数据库、构建前后端并启动：
+
+```bash
+docker compose up -d --build
+```
+
+等 5~10 分钟构建完成，浏览器打开 <http://localhost:8081/> 即可。
+数据库密码、百度密钥想改的话，在根目录建一个 `.env` 文件（参照 `deploy/install-server.sh` 里生成的那几个变量）。
+
+### 方式二：不用 Docker，手动跑
+
+**前置环境**：JDK 17、Maven 3.9+、MySQL 8/9、Node.js 20+（只跑后端托管模式的话可以不用 Node）。
+
+```bash
+# 1) 建库（MySQL 里执行一次）
+#    CREATE DATABASE med_reminder CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
+# 2) 补本地配置：复制模板并填上自己的数据库密码
+cp backend/src/main/resources/application-local.yml.example backend/src/main/resources/application-local.yml
+#    编辑 application-local.yml：datasource.password 填你的 MySQL 密码
+#    （百度密钥没有也能跑，只是拍照识药不可用）
+
+# 3) 启动后端（表结构会在启动时自动创建）
+cd backend && mvn spring-boot:run
+
+# 4) 另开一个终端，构建前端并交给后端托管
+cd frontend && npm install && npm run build
+#    然后打开 http://localhost:8081/
+```
+
+Windows 用户也可以直接双击仓库里的 `启动系统.bat`（会自动构建前端并启动后端）。
+
+> 开发前端时用 `npm run dev`（5173 端口，自动代理到后端 8081），改代码即时生效。
+
+### 跑不起来时先看这几条
+
+| 现象 | 原因 |
+| --- | --- |
+| 启动报数据库连接失败 | `application-local.yml` 没建，或密码填错，或库 `med_reminder` 不存在 |
+| 提示端口 8081 被占用 | 已经有一个实例在跑，先关掉旧窗口 |
+| 页面能打开但接口全报 401 | 正常现象：系统是账号制，先注册一个账号再操作 |
+| 拍照识药提示未配置密钥 | 没填百度 OCR 的 API Key / Secret Key |
+| 语音提问不可用 | 需要 https 或 localhost 打开，且百度控制台要开通「短语音识别」 |
+
 ## 项目亮点
 
 1. **拍照识药**：拍药盒照片自动识别药名，并用药品别名词典把"拜阿司匹灵""阿司匹林肠溶片"统一归一到"阿司匹林"
@@ -194,6 +244,8 @@ npm.cmd run build
 
 > **想部署成正式线上网址（带 https、不依赖你电脑开机）请看 → [docs/deploy-cloud.md](docs/deploy-cloud.md)**：
 > 里面写了用 Render（免费）+ TiDB Cloud（免费 MySQL）的完整步骤，仓库里已经准备好 Dockerfile 和 render.yaml，照着填几个环境变量就能上线。
+>
+> **已经买了云服务器？** 直接看 → [docs/deploy-server.md](docs/deploy-server.md)：装好系统后两条命令部署完成（含买什么配置、安全组怎么放行、日常运维与备份命令）。
 
 双击 `启动公网访问.bat`：脚本会自动启动后端并建立一个 Cloudflare 免费临时隧道，窗口里会给出形如 `https://xxxx-xxxx.trycloudflare.com` 的公网地址，发给别人就能访问。
 

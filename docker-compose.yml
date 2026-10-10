@@ -5,7 +5,7 @@ services:
     image: mysql:9.6
     container_name: med-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: medreminder
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-medreminder}
       MYSQL_DATABASE: med_reminder
       TZ: Asia/Shanghai
     command:
@@ -30,13 +30,15 @@ services:
       SPRING_PROFILES_ACTIVE: cloud
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/med_reminder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: medreminder
-      # 下面两项按需填写
-      BAIDU_OCR_API_KEY: ""
-      BAIDU_OCR_SECRET_KEY: ""
-      PORT: 8081
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-medreminder}
+      BAIDU_OCR_API_KEY: ${BAIDU_OCR_API_KEY:-}
+      BAIDU_OCR_SECRET_KEY: ${BAIDU_OCR_SECRET_KEY:-}
+      ALLOW_REGISTER: ${ALLOW_REGISTER:-true}
+      # 2G 内存的服务器建议限制堆大小，避免被 OOM 杀掉
+      JAVA_TOOL_OPTIONS: -Xmx384m
+      PORT: ${APP_PORT:-8081}
     ports:
-      - "8081:8081"
+      - "${APP_PORT:-8081}:${APP_PORT:-8081}"
     restart: unless-stopped
 
 volumes:
