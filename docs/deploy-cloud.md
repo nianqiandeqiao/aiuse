@@ -43,7 +43,7 @@ Render 部署时要从 Git 仓库拉代码。你的代码在 Gitee：
 | 变量名 | 填什么 |
 | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `cloud` |
-| `SPRING_DATASOURCE_URL` | `jdbc:mysql://<TiDB主机>:4000/med_reminder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=true` |
+| `SPRING_DATASOURCE_URL` | `jdbc:mysql://<TiDB主机>:4000/med_reminder?useUnicode=true&characterEncoding=utf8&connectionTimeZone=Asia/Shanghai&forceConnectionTimeZoneToSession=true&sslMode=REQUIRED` |
 | `SPRING_DATASOURCE_USERNAME` | TiDB 给你的用户名 |
 | `SPRING_DATASOURCE_PASSWORD` | TiDB 给你的密码 |
 | `BAIDU_OCR_API_KEY` | 你的百度 API Key |

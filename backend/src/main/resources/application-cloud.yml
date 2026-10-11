@@ -1,7 +1,10 @@
 # 云平台配置：所有敏感信息都通过环境变量注入，仓库里不留任何密钥
 spring:
   datasource:
-    # 例：jdbc:mysql://<主机>:<端口>/<库名>?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true
+    # 例（已在 TiDB Cloud Starter v8.5.3 上实测通过）：
+    # jdbc:mysql://<主机>:4000/<库名>?useUnicode=true&characterEncoding=utf8&connectionTimeZone=Asia/Shanghai&forceConnectionTimeZoneToSession=true&sslMode=REQUIRED
+    # sslMode=REQUIRED 是 TiDB Cloud 的强制要求；forceConnectionTimeZoneToSession=true 用来修正
+    # TiDB 服务器为 UTC 导致的入库时间晚 8 小时问题
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}

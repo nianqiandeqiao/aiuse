@@ -71,13 +71,19 @@
 
    | 变量名 | 填什么 |
    | --- | --- |
-   | `SPRING_DATASOURCE_URL` | `jdbc:mysql://你的Host:4000/med_reminder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=true` |
+   | `SPRING_DATASOURCE_URL` | `jdbc:mysql://你的Host:4000/med_reminder?useUnicode=true&characterEncoding=utf8&connectionTimeZone=Asia/Shanghai&forceConnectionTimeZoneToSession=true&sslMode=REQUIRED` |
    | `SPRING_DATASOURCE_USERNAME` | TiDB 给你的 User（形如 `3abcxxxx.root`） |
    | `SPRING_DATASOURCE_PASSWORD` | TiDB 给你的 Password |
    | `BAIDU_OCR_API_KEY` | 你自己的百度 API Key，见下面的说明 |
    | `BAIDU_OCR_SECRET_KEY` | 你自己的百度 Secret Key，见下面的说明 |
 
    > 把 `你的Host` 换成第一步记下的真实 Host，**前后不要留空格**。
+   >
+   > 参数说明（照抄就行，别自己删）：
+   > - `sslMode=REQUIRED`：TiDB Cloud 强制加密连接，缺了会连不上；
+   > - `connectionTimeZone` + `forceConnectionTimeZoneToSession`：TiDB 服务器时区是 UTC，
+   >   不加这两项的话，入库时间会比北京时间**晚 8 小时**；
+   > - `characterEncoding=utf8`：保证中文不乱码。
    >
    > 🔐 **百度密钥从哪来**：打开本机文件 `backend/src/main/resources/application-local.yml`，
    > 里面 `api-key` 和 `secret-key` 两行就是要填的值（这个文件被 `.gitignore` 忽略，

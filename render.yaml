@@ -4,6 +4,8 @@ services:
     name: med-reminder
     runtime: docker
     plan: free
+    # 选新加坡：离国内用户最近，而且和 TiDB Cloud 集群（AWS 新加坡）在同一个机房片区，访问数据库延迟最低
+    region: singapore
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
