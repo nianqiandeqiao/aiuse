@@ -242,7 +242,13 @@ npm.cmd run build
 
 ### 7. 发布到公网给他人访问（可选）
 
-> **想部署成正式线上网址（带 https、不依赖你电脑开机）请看 → [docs/deploy-cloud.md](docs/deploy-cloud.md)**：
+> **推荐：想要固定网址、不依赖自己电脑开机 → [docs/deploy-render.md](docs/deploy-render.md)（手把手版）**
+>
+> 用 Render（免费）+ TiDB Cloud（免费 MySQL）。代码已镜像到 GitHub 供 Render 拉取：
+> <https://github.com/nianqiandeqiao/aiuse>（Render 不认 Gitee，必须走 GitHub）。
+> 改完代码双击根目录的 `推送到GitHub.bat` 即可同步上线。
+>
+> 备选方案（内容更全但步骤略抽象）→ [docs/deploy-cloud.md](docs/deploy-cloud.md)：
 > 里面写了用 Render（免费）+ TiDB Cloud（免费 MySQL）的完整步骤，仓库里已经准备好 Dockerfile 和 render.yaml，照着填几个环境变量就能上线。
 >
 > **已经买了云服务器？** 直接看 → [docs/deploy-server.md](docs/deploy-server.md)：装好系统后两条命令部署完成（含买什么配置、安全组怎么放行、日常运维与备份命令）。
@@ -433,4 +439,5 @@ powershell -ExecutionPolicy Bypass -File scripts/test-backend.ps1
 
 - 本机未安装 Node.js，前端 `npm run dev` 需要赵先安装 Node 18+（建议今天完成）。
 - 相互作用规则库只做 8~10 条，演示 1~2 组真实冲突即可。
-- 代码每天提交 Git；Gitee 远端仓库需团队创建后再配置 `git remote`。
+- 代码每天提交 Git；远端有两个：`origin` = Gitee（团队看代码），`github` = GitHub（Render 部署用）。
+- Render 免费实例 15 分钟无人访问会休眠，答辩/演示前先打开一次唤醒。

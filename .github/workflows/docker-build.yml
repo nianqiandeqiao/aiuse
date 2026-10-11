@@ -1,0 +1,42 @@
+name: docker-build
+
+# 目的：用 GitHub 的免费构建机跑一遍和 Render 完全相同的 Dockerfile。
+# 只要这里绿了，Render 那边就不会因为构建问题失败。
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          test -f Dockerfile && echo "Dockerfile OK"
+          test -f render.yaml && echo "render.yaml OK"
+          test -f frontend/package-lock.json && echo "package-lock.json OK"
+          test -f backend/src/main/resources/schema.sql && echo "schema.sql OK"
+
+      - name: Build image (same Dockerfile Render uses)
+        run: docker build --tag aiuse:ci .
+
+      - name: Verify the jar was produced
+        # 注意：镜像的 ENTRYPOINT 是 "sh -c 'java -jar ...'"，想进容器执行自己的命令
+        # 必须用 --entrypoint 覆盖，否则参数会被 ENTRYPOINT 吃掉。
+        run: |
+          docker run --rm --entrypoint sh aiuse:ci -c '
+            set -e
+            ls -l /app/app.jar
+            test -s /app/app.jar
+            SIZE=$(stat -c%s /app/app.jar)
+            echo "app.jar size = $SIZE bytes"
+            if [ "$SIZE" -lt 5000000 ]; then
+              echo "FAIL: app.jar looks too small to be a Spring Boot fat jar"
+              exit 1
+            fi
+            echo "OK: Spring Boot fat jar produced"
+          '

@@ -8,8 +8,11 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: cloud
+      # 免费实例只有 512MB 内存，JVM 必须收紧，否则会被平台 OOM 杀掉
       - key: JAVA_TOOL_OPTIONS
-        value: -Xmx320m
+        value: -Xmx256m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -Xss512k
+      - key: ALLOW_REGISTER
+        value: "true"
       # 下面这些在 Render 控制台里填真实值（sync: false 表示不在仓库里存值）
       - key: SPRING_DATASOURCE_URL
         sync: false

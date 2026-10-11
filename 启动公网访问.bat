@@ -50,5 +50,5 @@ echo Starting public tunnel. Your public URL appears below:
 echo    https://xxxx-xxxx-xxxx.trycloudflare.com
 echo Send that URL to others. Press Ctrl+C here to stop sharing.
 echo.
-"tools\cloudflared.exe" tunnel --url http://localhost:8081 --no-autoupdate
+"tools\cloudflared.exe" tunnel --protocol http2 --url http://localhost:8081 --no-autoupdate
 pause

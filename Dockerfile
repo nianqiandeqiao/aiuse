@@ -11,7 +11,8 @@ RUN npm run build
 FROM maven:3.9-eclipse-temurin-17 AS backend
 WORKDIR /app
 COPY backend/pom.xml ./backend/pom.xml
-RUN mvn -f backend/pom.xml -B -q dependency:go-offline
+# 预下载依赖（仅为加速；偶发网络抖动不应让整个构建失败，后面 package 会补齐）
+RUN mvn -f backend/pom.xml -B -q dependency:go-offline || true
 COPY backend/src ./backend/src
 COPY --from=frontend /app/backend/src/main/resources/static ./backend/src/main/resources/static
 RUN mvn -f backend/pom.xml -B clean package -DskipTests
